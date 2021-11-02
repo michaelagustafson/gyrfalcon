@@ -19,4 +19,4 @@ for (i in 1:length(files)) {
 
 
 # export object with all waypoints to csv file
-write.csv(wpfull, "finalwp_2019.csv") 
+write.csv(wpfull, "gyrfalcon/data/finalwp_2019.csv") 
