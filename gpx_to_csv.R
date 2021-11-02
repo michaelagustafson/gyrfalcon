@@ -1,6 +1,9 @@
 library(dplyr)
+library(here)
 library(plotKML)
 
+
+here()
 # - List all filenames in folder starting with "Waypoint"
 # Works for waypoint files with names like "Waypoints_22-FEB-16.gpx"
 files <- list.files(pattern = "*.gpx*")
@@ -19,4 +22,4 @@ for (i in 1:length(files)) {
 
 
 # export object with all waypoints to csv file
-write.csv(wpfull, "gyrfalcon/data/finalwp_2019.csv") 
+write.csv(wpfull, here("data/finalwp_2019.csv")) 
