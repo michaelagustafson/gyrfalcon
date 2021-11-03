@@ -89,7 +89,7 @@ st_is_valid(points.21.sf)
 
 ############## STOP HERE - JUST NEED TO REPROJECT INTO SAME CRS AS RASTER
 
-nlcd.rast <- rast("C:/Gyrfalcon/gyrfalcon/NLCD_2016_Land_Cover_AK_20200724/NLCD_2016_Land_Cover_AK_20200724.img")
+nlcd.rast <- rast("C:/Gyrfalcon/gyrfalcon/NLCD_2016_Land_Cover_AK_20200724.img")
 plot(nlcd.rast)
 
 crs(nlcd.rast, describe = TRUE)
@@ -128,6 +128,77 @@ nlcd.crop <- terra::crop(nlcd.rast, e)
 plot(nlcd.crop)
 plot(points19.proj, add = TRUE)
 plot(points21.proj[1], add = TRUE)
+
+######################################################################
+
+### BUFFER ###
+
+points19.buff <- st_buffer(points19.proj, 400)
+
+points21.buff <- st_buffer(points21.proj, 400)
+
+
+#######################################################################
+
+# Extract raster information for buffers
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
