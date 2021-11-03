@@ -89,7 +89,7 @@ st_is_valid(points.21.sf)
 
 ############## STOP HERE - JUST NEED TO REPROJECT INTO SAME CRS AS RASTER
 
-nlcd.rast <- rast("C:/Gyrfalcon/gyrfalcon/NLCD_2016_Land_Cover_AK_20200724.img")
+nlcd.rast <- raster::raster("C:/Gyrfalcon/gyrfalcon/NLCD_2016_Land_Cover_AK_20200724.img")
 plot(nlcd.rast)
 
 crs(nlcd.rast, describe = TRUE)
@@ -147,12 +147,19 @@ points21.buff <- st_buffer(points21.proj, 400)
 
 # need to turn points buffer into a spatvector??
 
-points19.vect <- terra::vect(points19.buff)
+points19.spdf <- as(points21.buff, "Spatial")
+
+plot(points19.spdf)
+
+points19.lc <- raster::extract(x = nlcd.rast,
+                       y = points19.spdf)
 
 
+# now sort and summarize:
 
+z <- sort(unique(raster::values(nlcd.rast)))
 
-
+# okay so looks like we do need to do this in terra/cropped version
 
 
 
