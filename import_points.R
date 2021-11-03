@@ -142,7 +142,12 @@ points21.buff <- st_buffer(points21.proj, 400)
 
 # Extract raster information for buffers
 
+# Will be extracting from circular buffers and creating a list of
+# the distribution of values within the buffer:
 
+# need to turn points buffer into a spatvector??
+
+points19.vect <- terra::vect(points19.buff)
 
 
 
