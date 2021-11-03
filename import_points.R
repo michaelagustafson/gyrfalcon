@@ -89,7 +89,7 @@ st_is_valid(points.21.sf)
 
 ############## STOP HERE - JUST NEED TO REPROJECT INTO SAME CRS AS RASTER
 
-nlcd.rast <- raster::raster("C:/Gyrfalcon/gyrfalcon/NLCD_2016_Land_Cover_AK_20200724.img")
+nlcd.rast <- terra::rast("C:/Gyrfalcon/gyrfalcon/NLCD_2016_Land_Cover_AK_20200724.img")
 plot(nlcd.rast)
 
 crs(nlcd.rast, describe = TRUE)
@@ -147,30 +147,53 @@ points21.buff <- st_buffer(points21.proj, 400)
 
 # need to turn points buffer into a spatvector??
 
-points19.spdf <- as(points21.buff, "Spatial")
+points19.vect <- vect(points21.buff)
 
-plot(points19.spdf)
+plot(points19.vect)
 
-points19.lc <- raster::extract(x = nlcd.rast,
-                       y = points19.spdf)
+points19.lc <- terra::extract(x = nlcd.rast,
+                       y = points19.vect)
 
 
 # now sort and summarize:
 
-z <- sort(unique(raster::values(nlcd.rast)))
+z <- sort(unique(raster::values(nlcd.crop)))
 
 # okay so looks like we do need to do this in terra/cropped version
 
+summarizeLC <- function(x,LC_classes,LC_names = NULL){
+  # Find the number of cells 
+  y <- length(x)
+  # Make a table of the cells
+  tx <- table(x)
+  # Create an empty array to store landcover data
+  LC <- array(NA,c(1,length(LC_classes)))
+  # Loop through the landcover types & return 
+  # the number of cells within each landcover type
+  for(i in seq(LC_classes)){
+    LC[1,i] <- ifelse(LC_classes[i] %in% dimnames(tx)[[1]], 
+                      #if true
+                      tx[which(dimnames(tx)[[1]]==LC_classes[i])],
+                      # if false
+                      0) 
+  } # end loop
+  # Convert to percentage 
+  LC <- LC/y
+  # 
+  if(!is.null(LC_names)){
+    colnames(LC)<-LC_names}
+  else{colnames(LC)<-LC_classes}
+  
+  return(LC)
+}
+
+summaryValues <- lapply(points19.lc,FUN = summarizeLC,LC_classes = z)
+
+print(summaryValues)
 
 
-
-
-
-
-
-
-
-
+# hm okay sort of along the lines of this but need to figure out how to do it 
+# for each point and assign those values to columns for each point
 
 
 
