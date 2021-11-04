@@ -167,17 +167,7 @@ landcover_proportions21 <- lapply(lc.21, function(x) {
   sort(proportions_x21)
 })
 lc.21.table <- sort(unlist(landcover_proportions21))
-<<<<<<< HEAD
 
-lc.21.df <- data.frame(Category = names(lc.21.table), Value = lc.21.table)
-
-dumb21 <- lapply(1:length(lc.21), function(x) {
-  counts_x21 <- table(lc.21[[x]])
-  proportions_x21 <- as.data.frame(prop.table(counts_x21))
-  proportions_x21$ID <- x
-  return(proportions_x21)
-})
-=======
 
 lc.21.df <- data.frame(Category = names(lc.21.table), Value = lc.21.table)
 
@@ -188,11 +178,8 @@ dumb21 <- lapply(1:length(lc.21), function(x) {
   return(proportions_x21)
 })
 
-dumb3 <- do.call(rbind, dumb21)
->>>>>>> 7f66e19d719460881cee53b2b863fbfe0964bf81
 
 dumb3 <- do.call(rbind, dumb21)
-
 
 #### Now need to change land class values to names and spread dataframe longways
 
