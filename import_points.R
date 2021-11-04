@@ -89,7 +89,7 @@ st_is_valid(points.21.sf)
 
 ############## STOP HERE - JUST NEED TO REPROJECT INTO SAME CRS AS RASTER
 
-nlcd.rast <- terra::rast("C:/Gyrfalcon/gyrfalcon/NLCD_2016_Land_Cover_AK_20200724.img")
+nlcd.rast <- raster::raster("C:/Gyrfalcon/gyrfalcon/NLCD_2016_Land_Cover_AK_20200724.img")
 plot(nlcd.rast)
 
 crs(nlcd.rast, describe = TRUE)
@@ -115,15 +115,15 @@ plot(points21.proj)
 ##### CREATE A BOUNDING BOX 
 
 #bbox <- st_bbox(c(xmin = -590784, ymin = 1652109, xmax = -4604851, ymax = 1783540), crs = st_crs(latlong19.proj))
-?terra::crop
+
 ?ext
-e <- ext(-600000, -450485.1, 1600000, 1800000)
+e <- raster::extent(-600000, -450485.1, 1600000, 1800000)
 plot(nlcd.rast)
 plot(e, add = TRUE)
 
 
 ##### CROP HABITAT RASTER TO BBOX EXTENT 
-nlcd.crop <- terra::crop(nlcd.rast, e)
+nlcd.crop <- raster::crop(nlcd.rast, e)
 
 plot(nlcd.crop)
 plot(points19.proj, add = TRUE)
@@ -131,14 +131,33 @@ plot(points21.proj[1], add = TRUE)
 
 ######################################################################
 
-### BUFFER ###
-
-points19.buff <- st_buffer(points19.proj, 400)
-
-points21.buff <- st_buffer(points21.proj, 400)
 
 
+# extract landcover within 400m buffer:
+
+lc.19 <- raster::extract(nlcd.crop, points19.proj, buffer = 400)
 #######################################################################
+
+landcover_proportions <- lapply(lc.19, function(x) {
+  counts_x <- table(x)
+  proportions_x <- prop.table(counts_x)
+  sort(proportions_x)
+})
+lc.19.table <- sort(unlist(landcover_proportions))
+
+lc.19.df <- data.frame(Category = names(lc.19.table), Value = lc.19.table)
+
+dumb <- lapply(1:length(lc.19), function(x) {
+  counts_x <- table(lc.19[[x]])
+  proportions_x <- as.data.frame(prop.table(counts_x))
+  proportions_x$ID <- x
+  return(proportions_x)
+  })
+
+dumb2 <- do.call(rbind, dumb)
+
+
+
 
 # Extract raster information for buffers
 
@@ -147,75 +166,18 @@ points21.buff <- st_buffer(points21.proj, 400)
 
 # need to turn points buffer into a spatvector??
 
-points19.vect <- vect(points21.buff)
+points19.vect <- vect(points19.buff)
 
 plot(points19.vect)
 
-points19.lc <- terra::extract(x = nlcd.rast,
-                       y = points19.vect)
+points19.lc <- terra::extract(nlcd.crop, points19.vect)
 
 
-# now sort and summarize:
+points21.vect <- vect(points21.buff)
 
-z <- sort(unique(raster::values(nlcd.crop)))
+plot(points21.vect)
 
-# okay so looks like we do need to do this in terra/cropped version
-
-summarizeLC <- function(x,LC_classes,LC_names = NULL){
-  # Find the number of cells 
-  y <- length(x)
-  # Make a table of the cells
-  tx <- table(x)
-  # Create an empty array to store landcover data
-  LC <- array(NA,c(1,length(LC_classes)))
-  # Loop through the landcover types & return 
-  # the number of cells within each landcover type
-  for(i in seq(LC_classes)){
-    LC[1,i] <- ifelse(LC_classes[i] %in% dimnames(tx)[[1]], 
-                      #if true
-                      tx[which(dimnames(tx)[[1]]==LC_classes[i])],
-                      # if false
-                      0) 
-  } # end loop
-  # Convert to percentage 
-  LC <- LC/y
-  # 
-  if(!is.null(LC_names)){
-    colnames(LC)<-LC_names}
-  else{colnames(LC)<-LC_classes}
-  
-  return(LC)
-}
-
-summaryValues <- lapply(points19.lc,FUN = summarizeLC,LC_classes = z)
-
-print(summaryValues)
-
-
-# hm okay sort of along the lines of this but need to figure out how to do it 
-# for each point and assign those values to columns for each point
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+points21.lc <- terra::extract(nlcd.crop, points21.vect)
 
 
 
