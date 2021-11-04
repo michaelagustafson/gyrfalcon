@@ -136,6 +136,7 @@ plot(points21.proj[1], add = TRUE)
 # extract landcover within 400m buffer:
 
 lc.19 <- raster::extract(nlcd.crop, points19.proj, buffer = 400)
+lc.21 <- raster::extract(nlcd.crop, points19.proj, buffer = 400)
 #######################################################################
 
 landcover_proportions <- lapply(lc.19, function(x) {
@@ -157,46 +158,29 @@ dumb <- lapply(1:length(lc.19), function(x) {
 dumb2 <- do.call(rbind, dumb)
 
 
+# 2021 points
 
 
-# Extract raster information for buffers
+landcover_proportions21 <- lapply(lc.21, function(x) {
+  counts_x21 <- table(x)
+  proportions_x21 <- prop.table(counts_x21)
+  sort(proportions_x21)
+})
+lc.21.table <- sort(unlist(landcover_proportions21))
 
-# Will be extracting from circular buffers and creating a list of
-# the distribution of values within the buffer:
+lc.21.df <- data.frame(Category = names(lc.21.table), Value = lc.21.table)
 
-# need to turn points buffer into a spatvector??
+dumb21 <- lapply(1:length(lc.21), function(x) {
+  counts_x21 <- table(lc.21[[x]])
+  proportions_x21 <- as.data.frame(prop.table(counts_x21))
+  proportions_x21$ID <- x
+  return(proportions_x21)
+})
 
-points19.vect <- vect(points19.buff)
-
-plot(points19.vect)
-
-points19.lc <- terra::extract(nlcd.crop, points19.vect)
-
-
-points21.vect <- vect(points21.buff)
-
-plot(points21.vect)
-
-points21.lc <- terra::extract(nlcd.crop, points21.vect)
+dumb3 <- do.call(rbind, dumb21)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#### Now need to change land class values to names and spread dataframe longways
 
 
 
