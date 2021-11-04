@@ -129,14 +129,12 @@ plot(nlcd.crop)
 plot(points19.proj, add = TRUE)
 plot(points21.proj[1], add = TRUE)
 
+
 ######################################################################
-
-
-
 # extract landcover within 400m buffer:
 
 lc.19 <- raster::extract(nlcd.crop, points19.proj, buffer = 400)
-lc.21 <- raster::extract(nlcd.crop, points19.proj, buffer = 400)
+lc.21 <- raster::extract(nlcd.crop, points21.proj, buffer = 400)
 #######################################################################
 
 landcover_proportions <- lapply(lc.19, function(x) {
@@ -182,6 +180,48 @@ dumb21 <- lapply(1:length(lc.21), function(x) {
 dumb3 <- do.call(rbind, dumb21)
 
 #### Now need to change land class values to names and spread dataframe longways
+
+# import classificaiton legend
+
+lc.class <- read.csv(here("data/lclegend.csv"))
+head(lc.class)
+# check structure and make sure Var1 is a factor 
+str(lc.class)
+lc.class$Var1 <- as.factor(lc.class$Var1)
+
+# change name of classification column
+lc.class <- rename(lc.class, Land_Class = "X")
+head(lc.class)
+
+# join with dumb2 df
+dumb2 <- left_join(dumb2, lc.class)
+
+# subset and spread 
+
+lc.19.final <- dumb2 %>%
+  dplyr::select(ID, Land_Class, Freq) %>%
+  spread(key = Land_Class, value = Freq)
+
+# now do the same for 2021
+
+dumb3 <- left_join(dumb3, lc.class)
+
+# subset and spread 
+
+lc.21.final <- dumb3 %>%
+  dplyr::select(ID, Land_Class, Freq) %>%
+  spread(key = Land_Class, value = Freq)
+
+# now combine id names back with original
+
+lc.19.final$id <- points19.proj$id
+lc.21.final$id <- points21.proj$id
+
+
+
+
+
+
 
 
 
