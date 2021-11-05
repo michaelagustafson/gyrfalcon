@@ -252,3 +252,12 @@ lc.21.fin.clip <- lc.21.final %>%
   dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands)
 
 
+# export as .csvs?
+
+write.csv(lc.19.fin.clip, here("data/points19_habitat.csv"))
+write.csv(lc.21.fin.clip, here("data/points21_habitat.csv"))
+
+
+
+
+
