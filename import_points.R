@@ -218,12 +218,37 @@ lc.19.final$id <- points19.proj$id
 lc.21.final$id <- points21.proj$id
 
 
+# now summarise columns together to reduce habitat variables:
+
+lc.19.final <- lc.19.final %>%
+  replace(is.na(.), 0)
+
+lc.19.final <- lc.19.final %>%
+  mutate(Tundra = `Grassland/Herbaceous` + `Sedge/Herbaceous`,
+         Low_Shrub = `Dwarf Scrub`,
+         Bare_Ground = `Barren Land (Rock/Sand/Clay)`,
+         Tall_Shrub_Forest = `Shrub/Scrub` + `Mixed Forest` + `Deciduous Forest` + `Evergreen Forest` + `Woody Wetlands`,
+         Wetlands = `Emergent Herbaceous Wetlands` + `Open Water`)
+
+lc.19.fin.clip <- lc.19.final %>%
+  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands)
 
 
 
 
 
+lc.21.final <- lc.21.final %>%
+  replace(is.na(.), 0)
+
+lc.21.final <- lc.21.final %>%
+  mutate(Tundra = `Grassland/Herbaceous` + `Sedge/Herbaceous`,
+         Low_Shrub = `Dwarf Scrub`,
+         Bare_Ground = `Barren Land (Rock/Sand/Clay)`,
+         Tall_Shrub_Forest = `Shrub/Scrub` + `Mixed Forest` + `Deciduous Forest` + `Evergreen Forest` + `Woody Wetlands`,
+         Wetlands = `Emergent Herbaceous Wetlands` + `Open Water`)
 
 
+lc.21.fin.clip <- lc.21.final %>%
+  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands)
 
 
