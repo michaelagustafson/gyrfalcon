@@ -237,9 +237,6 @@ str(wipt.wide)
 wipt.wide$id <- as.factor(wipt.wide$id)
 colnames(wipt.wide)
 
-
-?unmarked
-
 timeints <- wipt.wide[,c(2:6)]
 
 obcovs <- all.env.scaled[,c(2, 4:8)]
@@ -249,7 +246,7 @@ siCovs <- all.env.scaled[,c(11:15)]
 wiptFrame2 <- unmarkedFrameMPois(
   # import time removal columns(counts):
   y = timeints, 
-  obsCovs = obsCovs,
+  obsCovs = obcovs,
   #import site level covariates:
   siteCovs = siCovs, # site covs will also be my spatial habitat data
   # define pifun type: 
