@@ -142,6 +142,7 @@ all.env <- inner_join(all.env, all.hab)
 str(all.env) 
 all.env$year <- as.factor(all.env$year)
 all.env$observer <- as.factor(all.env$observer)
+all.env$hear <- as.factor(all.env$hear)
 
 
 
@@ -183,7 +184,6 @@ for( p in 1:length(prednames) ){
 str(all.env)
 jul.scaled <- scale(all.env$julian)
 min.scaled <- scale(all.env$min_after_sun)
-hear.scaled <- scale(all.env$hear)
 temp.scaled <- scale(as.numeric(all.env$tempf))
 t.scaled <- scale(as.numeric(all.env$Tundra))
 ls.scaled <- scale(as.numeric(all.env$Low_Shrub))
@@ -197,7 +197,6 @@ all.env.scaled <- data.frame(all.env)
 
 all.env.scaled$julian <- jul.scaled
 all.env.scaled$min_after_sun <- min.scaled
-all.env.scaled$hear <- hear.scaled
 all.env.scaled$tempf <- temp.scaled
 all.env.scaled$Tundra <- t.scaled
 all.env.scaled$Low_Shrub <- ls.scaled
@@ -211,9 +210,6 @@ head(all.env.scaled)
 cor(all.env.scaled$julian, all.env.scaled$tempf) # hmm 0.54 correlation... makes sense I guess? 
 # i think in my earlier analysis i used julian date instead of temp...
 cor(all.env.scaled$julian, all.env.scaled$min_after_sun) ### -0.196, not bad??
-cor(all.env.scaled$julian, all.env.scaled$hear) # -0.115
-cor(all.env.scaled$min_after_sun, all.env.scaled$hear) # 0.074
-cor(all.env.scaled$tempf, all.env.scaled$hear) #-0.092
 cor(all.env.scaled$tempf, all.env.scaled$min_after_sun)# 0.229
 cor(all.env.scaled$Tundra, all.env.scaled$Low_Shrub) #-0.29
 cor(all.env.scaled$Tundra, all.env.scaled$Tall_Shrub_Forest) #-0.5211585
@@ -234,13 +230,65 @@ colnames(all.env.scaled)
 str(all.env.scaled)
 str(wipt.wide)
 
+
+
 wipt.wide$id <- as.factor(wipt.wide$id)
 colnames(wipt.wide)
 
-timeints <- wipt.wide[,c(2:6)]
+#######################################################################
+#######################################################################
+# to test code with hab variables need to sub out missing points from 
+# obs dataframe
 
-obcovs <- all.env.scaled[,c(2, 4:8)]
-siCovs <- all.env.scaled[,c(11:15)]
+test.ids <- as.data.frame(all.env.scaled$id)
+
+test.ids <- rename(id = "all.env.scaled$id", test.ids)
+str(wipt.wide)
+wipt.wide$id <- as.character(wipt.wide$id)
+test.wipt.wide <- inner_join(test.ids, wipt.wide)
+
+test.timeints <- test.wipt.wide[,c(2:6)]
+test.obscovs <- all.env.scaled[,c(2, 4:8)]
+test.sicovs <- all.env.scaled[,c(11:15)]
+
+dim(test.timeints)
+dim(test.obscovs)
+dim(test.sicovs)
+
+
+
+test.obscovs <- as.data.frame(test.obscovs)
+str(test.obscovs)
+
+#test.obscovs$julian <- as.numeric(test.obscovs$julian)
+#test.obscovs$min_after_sun <- as.numeric(test.obscovs$min_after_sun)
+#test.obscovs$observer <- as.factor(test.obscovs$observer)
+#test.obscovs$tempf <- as.numeric(test.obscovs$tempf)
+#test.obscovs$sky <- as.factor(test.obscovs$sky)
+#test.obscovs$hear <- as.numeric(test.obscovs$hear)
+
+test.wiptFrame2 <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = test.timeints, 
+  #import site level covariates:
+  siteCovs = test.sicovs, # site covs will also be my spatial habitat data
+  obsCovs = list(cov1 = test.obscovs$julian,
+                 cov2 = test.obscovs$min_after_sun,
+                 cov3 = test.obscovs$observer,
+                 cov4 = test.obscovs$tempf,
+                 cov5 = test.obscovs$sky,
+                 cov6 = test.obscovs$hear)),
+  # define pifun type: 
+  type = "removal" )
+
+
+
+####################################################################
+####################################################################
+#timeints <- wipt.wide[,c(2:6)]
+
+#obcovs <- all.env.scaled[,c(2, 4:8)]
+#siCovs <- all.env.scaled[,c(11:15)]
 
 
 wiptFrame2 <- unmarkedFrameMPois(
