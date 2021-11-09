@@ -33,6 +33,12 @@ all.hab <- read.csv(here("data/all_hab.csv"))
 colnames(all.env)
 all.env <- all.env[,c(2:9)]
 
+colnames(all.obs)
+all.obs <- all.obs[,c(2:10)]
+
+colnames(all.hab)
+all.hab <- all.hab[,c(3:8)]
+
 ### END LOAD DATA -------------------------------
 
 ### CLEAN DATA ----------------------------------
@@ -235,60 +241,10 @@ str(wipt.wide)
 wipt.wide$id <- as.factor(wipt.wide$id)
 colnames(wipt.wide)
 
-#######################################################################
-#######################################################################
-# to test code with hab variables need to sub out missing points from 
-# obs dataframe
+timeints <- wipt.wide[,c(2:6)]
 
-test.ids <- as.data.frame(all.env.scaled$id)
-
-test.ids <- rename(id = "all.env.scaled$id", test.ids)
-str(wipt.wide)
-wipt.wide$id <- as.character(wipt.wide$id)
-test.wipt.wide <- inner_join(test.ids, wipt.wide)
-
-test.timeints <- test.wipt.wide[,c(2:6)]
-test.obscovs <- all.env.scaled[,c(2, 4:8)]
-test.sicovs <- all.env.scaled[,c(11:15)]
-
-dim(test.timeints)
-dim(test.obscovs)
-dim(test.sicovs)
-
-
-
-test.obscovs <- as.data.frame(test.obscovs)
-str(test.obscovs)
-
-#test.obscovs$julian <- as.numeric(test.obscovs$julian)
-#test.obscovs$min_after_sun <- as.numeric(test.obscovs$min_after_sun)
-#test.obscovs$observer <- as.factor(test.obscovs$observer)
-#test.obscovs$tempf <- as.numeric(test.obscovs$tempf)
-#test.obscovs$sky <- as.factor(test.obscovs$sky)
-#test.obscovs$hear <- as.numeric(test.obscovs$hear)
-
-test.wiptFrame2 <- unmarkedFrameMPois(
-  # import time removal columns(counts):
-  y = test.timeints, 
-  #import site level covariates:
-  siteCovs = test.sicovs, # site covs will also be my spatial habitat data
-  obsCovs = list(cov1 = test.obscovs$julian,
-                 cov2 = test.obscovs$min_after_sun,
-                 cov3 = test.obscovs$observer,
-                 cov4 = test.obscovs$tempf,
-                 cov5 = test.obscovs$sky,
-                 cov6 = test.obscovs$hear)),
-  # define pifun type: 
-  type = "removal" )
-
-
-
-####################################################################
-####################################################################
-#timeints <- wipt.wide[,c(2:6)]
-
-#obcovs <- all.env.scaled[,c(2, 4:8)]
-#siCovs <- all.env.scaled[,c(11:15)]
+obcovs <- all.env.scaled[,c(2, 4:8)]
+siCovs <- all.env.scaled[,c(11:15)]
 
 
 wiptFrame2 <- unmarkedFrameMPois(
