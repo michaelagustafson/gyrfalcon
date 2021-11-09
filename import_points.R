@@ -69,13 +69,25 @@ miss.og.points <- rename(miss.og.points, "id" = "name")
 
 
 ### NEED TO CHANGE ID NAMES BACK TO MATCH POINTS 2019
+
+koug.names <- as.data.frame(miss.points.koug$id)
+koug.names <- rename(koug.names, 'id' = 'miss.points.koug$id')
+tell.names <- as.data.frame(miss.points.tell$id)
+tell.names <- rename(tell.names, 'id' = 'miss.points.tell$id')
+miss.names <- rbind(koug.names, tell.names)
+
+
+miss.og.points$id <- miss.names$id
+str(miss.og.points)
+
+
 #######################################################################
 
 points.2019 <- points.2019[complete.cases(points.2019),]
 
-points.2019.all <- rbind(points.2019, miss.og.points)
+points.2019.all <- rbind(miss.og.points, points.2019)
 
-points19.sf <- st_as_sf(points.2019, 
+points19.sf <- st_as_sf(points.2019.all, 
                          coords = c("lon", "lat"),
                          crs = 4326)
 
