@@ -21,6 +21,11 @@ library(stringr)
 ### Load data
 points.19 <- read.csv(here("data/Point_Count_Env_2019_MG_cleaned.csv"))
 gpx.19 <- read.csv(here("data/finalwp_2019.csv"))
+ogpoints.19 <- read.csv("C:/Gyrfalcon/gyrfalcon/data/originalpoints_2019.csv", skip = 22)
+backup.19 <- read.csv("C:/Gyrfalcon/gyrfalcon/data/GPS002_2019backup.csv", skip = 22)
+
+backup.19$name = str_remove(backup.19$name, "^0")
+
 
 # match key id names
 gpx.19 <- rename(gpx.19, Waypoint_num = name)
@@ -37,13 +42,38 @@ colnames(points.gpx.join)
 
 points.2019 <- points.gpx.join[,c(35, 28:30)]
 
+missing.points <- points.gpx.join[c(1:17),]
+
+miss.points.koug <- missing.points[c(1:11),]
+miss.points.tell <- missing.points[c(12:17),]
+# Need id names to match those on the points gpx
+
+miss.points.koug$UNIT_ID <- paste("K", miss.points.koug$UNIT_ID, sep = "")
+miss.points.tell$UNIT_ID <- paste("T", miss.points.tell$UNIT_ID, sep = "")
+miss.points.koug$Transect_ID <- paste("T", miss.points.koug$Transect_ID, sep = "")
+miss.points.tell$Transect_ID <- paste("T", miss.points.tell$Transect_ID, sep = "")
+
+missing.points <- rbind(miss.points.koug, miss.points.tell)
+
+missing.points$name <- paste(missing.points$UNIT_ID, missing.points$Transect_ID, missing.points$Point_ID, sep = "_")
+
+?left_join
+miss.og.point.join <- left_join(missing.points, ogpoints.19, by = "name")
+
+colnames(miss.og.point.join)
+miss.og.points <- miss.og.point.join[,c(36, 39, 38, 40)]
+miss.og.points <- rename(miss.og.points, "lat" = "lat.y")
+miss.og.points <- rename(miss.og.points, "lon" = "lon.y")
+miss.og.points <- rename(miss.og.points, "ele" = "ele.y")
+miss.og.points <- rename(miss.og.points, "id" = "name")
 
 
+### NEED TO CHANGE ID NAMES BACK TO MATCH POINTS 2019
 #######################################################################
 
 points.2019 <- points.2019[complete.cases(points.2019),]
 
-
+points.2019.all <- rbind(points.2019, miss.og.points)
 
 points19.sf <- st_as_sf(points.2019, 
                          coords = c("lon", "lat"),
