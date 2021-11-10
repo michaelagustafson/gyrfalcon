@@ -155,11 +155,11 @@ all.env$year <- as.factor(all.env$year)
 all.env$observer <- as.factor(all.env$observer)
 all.env$hear <- as.factor(all.env$hear)
 
-
+all.env <- rename(all.env, "jd" = "julian")
 
 ### CHECK DATA FOR CORRELATION ------------------
 
-prednames <- c("julian", "observer", "min_after_sun", "tempf", "sky", "hear")
+prednames <- c("jd", "observer", "min_after_sun", "tempf", "sky", "hear")
 
 for( p in 1:length(prednames) ){
   # create an object with the ggplot so that you can display it 
@@ -193,7 +193,7 @@ for( p in 1:length(prednames) ){
 
 #scale predictors:
 str(all.env)
-jul.scaled <- scale(all.env$julian)
+jul.scaled <- scale(all.env$jd)
 min.scaled <- scale(all.env$min_after_sun)
 temp.scaled <- scale(as.numeric(all.env$tempf))
 t.scaled <- scale(as.numeric(all.env$Tundra))
@@ -206,7 +206,7 @@ w.scaled <- scale(as.numeric(all.env$Wetlands))
 # replace in dataframe
 all.env.scaled <- data.frame(all.env)
 
-all.env.scaled$julian <- jul.scaled
+all.env.scaled$jd <- jul.scaled
 all.env.scaled$min_after_sun <- min.scaled
 all.env.scaled$tempf <- temp.scaled
 all.env.scaled$Tundra <- t.scaled
@@ -218,9 +218,9 @@ all.env.scaled$Wetlands <- w.scaled
 head(all.env.scaled)
 
 # look at correlations between scaled factors:
-cor(all.env.scaled$julian, all.env.scaled$tempf) # hmm 0.55 correlation... makes sense I guess? 
+cor(all.env.scaled$jd, all.env.scaled$tempf) # hmm 0.55 correlation... makes sense I guess? 
 # i think in my earlier analysis i used julian date instead of temp...
-cor(all.env.scaled$julian, all.env.scaled$min_after_sun) ### -0.184, not bad??
+cor(all.env.scaled$jd, all.env.scaled$min_after_sun) ### -0.184, not bad??
 cor(all.env.scaled$tempf, all.env.scaled$min_after_sun)# 0.232
 cor(all.env.scaled$Tundra, all.env.scaled$Low_Shrub) #-0.261
 cor(all.env.scaled$Tundra, all.env.scaled$Tall_Shrub_Forest) #-0.529
@@ -251,26 +251,27 @@ str(wipt.env.join)
 colnames(wipt.env.join)
 
 timeints <- wipt.env.join[,c(2:6)]
-obcovs <- wipt.env.join[,c(7, 9:13)]
-siCovs <- wipt.env.join[,c(14:18)]
+siCovs <- wipt.env.join[,c(7, 9:18)]
 
 
 wiptFrame2 <- unmarkedFrameMPois(
   # import time removal columns(counts):
   y = timeints, 
-  siteCovs = siCovs, # site covs will also be my spatial habitat data
+  siteCovs = siCovs, 
   # define pifun type: 
   type = "removal" )
 
 # fit models: multinomPois order of formulas: detection, abundance
-
-fm0.two <- multinomPois(~ 1 ~ 1, data = wiptFrame2) #null model
-fm.two.full <- multinomPois( ~ Tundra + Low_Shrub + Tall_Shrub_Forest + Wetlands + Bare_Ground ~ 1, data = wiptFrame2)
+#### DON'T KNOW ABOUT USING FULL MODEL B/C OF HIGH CORRELATION BETWEEN SHRUB+TUNDRA and remember to use temp and not julian date???
+fm0 <- multinomPois(~ 1 ~ 1, data = wiptFrame2) #null model
+fm.full <- multinomPois( ~ 1 + jd + min_after_sun + observer + tempf + sky + hear ~ 1 + Tundra + Low_Shrub + Tall_Shrub_Forest + Wetlands + Bare_Ground, data = wiptFrame2)
+fm.ts <- multinomPois( ~ 1 + jd + min_after_sun + observer + tempf + sky + hear ~ 1 + Tall_Shrub_Forest, data = wiptFrame2)
 
 # rank models by AIC:
 ms2 <- fitList(
-  "lam(.)p(.)" = fm0.two,
-  "lam(.)p(Tundra + Low_Shrub + Tall_Shrub_Forest + Wetlands + Bare_Ground)" = fm.two.full)
+  "lam(.)p(.)" = fm0,
+  "lam(Tundra + Low_Shrub + Tall_Shrub_Forest + Wetlands + Bare_Ground)p(jd + min_after_sun + observer + tempf + sky + hear)" = fm.full,
+  "lam(Tall_Shrub_Forest)p(jd + min_after_sun + observer + tempf + sky + hear)" = fm.ts)
 
 (ms2sel <- modSel(ms2))
 
