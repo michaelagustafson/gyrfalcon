@@ -302,7 +302,33 @@ lc.21.fin.clip <- lc.21.final %>%
 write.csv(lc.19.fin.clip, here("data/points19_habitat.csv"))
 write.csv(lc.21.fin.clip, here("data/points21_habitat.csv"))
 
+############################################################
+############################################################
 
+# LANDFIRE Categories:
+
+lf.tif <- terra::rast(here("LF2016_EVT_200_AK/Tif/LA16_EVT_200.tif"))
+
+plot(lf.tif)
+
+# crop
+
+e <- terra::ext(-600000, -450485.1, 1600000, 1800000)
+plot(lf.tif)
+plot(e, add = TRUE)
+
+
+##### CROP HABITAT RASTER TO BBOX EXTENT 
+
+lf.crop <- terra::crop(lf.tif, e)
+plot(lf.crop)
+crs(lf.crop)
+library(foreign)
+lf.dbf <- read.dbf(here("LF2016_EVT_200_AK/Tif/LA16_EVT_200.tif.vat.dbf"))
+
+str(lf.crop)
+
+lf.crop <- left_join(lf.crop, lf.dbf)
 
 
 
