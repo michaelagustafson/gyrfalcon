@@ -264,14 +264,14 @@ wiptFrame2 <- unmarkedFrameMPois(
 # fit models: multinomPois order of formulas: detection, abundance
 #### DON'T KNOW ABOUT USING FULL MODEL B/C OF HIGH CORRELATION BETWEEN SHRUB+TUNDRA and remember to use temp and not julian date???
 fm0 <- multinomPois(~ 1 ~ 1, data = wiptFrame2) #null model
-fm.full <- multinomPois( ~ 1 + jd + min_after_sun + observer + tempf + sky + hear ~ 1 + Tundra + Low_Shrub + Tall_Shrub_Forest + Wetlands + Bare_Ground, data = wiptFrame2)
-fm.ts <- multinomPois( ~ 1 + jd + min_after_sun + observer + tempf + sky + hear ~ 1 + Tall_Shrub_Forest, data = wiptFrame2)
+fm.ls <- multinomPois( ~ 1 + jd + min_after_sun + observer + sky + hear ~ 1 + Tundra + Low_Shrub + Bare_Ground, data = wiptFrame2)
+fm.ts <- multinomPois( ~ 1 + jd + min_after_sun + observer + sky + hear ~ 1 + Tundra + Tall_Shrub_Forest + Bare_Ground, data = wiptFrame2)
 
 # rank models by AIC:
 ms2 <- fitList(
   "lam(.)p(.)" = fm0,
-  "lam(Tundra + Low_Shrub + Tall_Shrub_Forest + Wetlands + Bare_Ground)p(jd + min_after_sun + observer + tempf + sky + hear)" = fm.full,
-  "lam(Tall_Shrub_Forest)p(jd + min_after_sun + observer + tempf + sky + hear)" = fm.ts)
+  "lam(Tundra + Low_Shrub + Bare_Ground)p(jd + min_after_sun + observer + sky + hear)" = fm.ls,
+  "lam(Tundra + Tall_Shrub_Forest + Bare_Ground)p(jd + min_after_sun + observer + sky + hear)" = fm.ts)
 
 (ms2sel <- modSel(ms2))
 
