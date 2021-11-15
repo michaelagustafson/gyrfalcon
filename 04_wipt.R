@@ -284,6 +284,28 @@ output.twomin
 
 ### SAVE OUTPUT
 
-write.csv(output.twomin, here("output/wipt_2min_output.csv"))
+# write.csv(output.twomin, here("output/wipt_2min_output.csv"))
+
+
+### ASSESSING MODEL FIT
+
+
+set.seed(2021)
+
+fitstats <- function(fm.ts) {
+  observed <- getY(fm.ts@data)
+  expected <- fitted(fm.ts)
+  resids <- residuals(fm.ts)
+  sse <- sum(resids^2)
+  chisq <- sum((observed - expected)^2 / expected)
+  freeTuke <- sum((sqrt(observed) - sqrt(expected))^2)
+  out <- c(SSE=sse, Chisq=chisq, freemanTukey=freeTuke)
+  return(out)
+}
+
+
+(gof <- parboot(fm.ts, fitstats, nsim = 1000, report = 1))
+
+save.image(here("workspaces/04_wipt_workspace.RData"))
 
 ### END SCRIPT
