@@ -248,6 +248,7 @@ lc.19.final <- dumb2 %>%
 
 dumb3 <- left_join(dumb3, lc.class)
 
+unique(dumb3$Land_Class)
 # subset and spread 
 
 lc.21.final <- dumb3 %>%
@@ -266,14 +267,15 @@ lc.19.final <- lc.19.final %>%
   replace(is.na(.), 0)
 
 lc.19.final <- lc.19.final %>%
-  mutate(Tundra = `Grassland/Herbaceous` + `Sedge/Herbaceous`,
+  mutate(Tundra = `Grassland/Herbaceous` + `Sedge/Herbaceous`, #separate tussocks??
          Low_Shrub = `Dwarf Scrub`,
          Bare_Ground = `Barren Land (Rock/Sand/Clay)`,
-         Tall_Shrub_Forest = `Shrub/Scrub` + `Mixed Forest` + `Deciduous Forest` + `Evergreen Forest` + `Woody Wetlands`,
-         Wetlands = `Emergent Herbaceous Wetlands` + `Open Water`)
+         Tall_Shrub_Forest = `Shrub/Scrub` + `Mixed Forest` + `Deciduous Forest` + `Evergreen Forest`,
+         Wetlands = `Emergent Herbaceous Wetlands` + `Woody Wetlands` + `Open Water`,
+         Developed = `Developed, Low Intensity`)
 
 lc.19.fin.clip <- lc.19.final %>%
-  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands)
+  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands, Developed)
 
 
 
@@ -287,11 +289,12 @@ lc.21.final <- lc.21.final %>%
          Low_Shrub = `Dwarf Scrub`,
          Bare_Ground = `Barren Land (Rock/Sand/Clay)`,
          Tall_Shrub_Forest = `Shrub/Scrub` + `Mixed Forest` + `Deciduous Forest` + `Evergreen Forest` + `Woody Wetlands`,
-         Wetlands = `Emergent Herbaceous Wetlands` + `Open Water`)
+         Wetlands = `Emergent Herbaceous Wetlands` + `Open Water`,
+         Developed = `Developed, Low Intensity`)
 
 
 lc.21.fin.clip <- lc.21.final %>%
-  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands)
+  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands, Developed)
 
 
 # export as .csvs?
