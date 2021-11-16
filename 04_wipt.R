@@ -264,14 +264,24 @@ wiptFrame2 <- unmarkedFrameMPois(
 # fit models: multinomPois order of formulas: detection, abundance
 #### DON'T KNOW ABOUT USING FULL MODEL B/C OF HIGH CORRELATION BETWEEN SHRUB+TUNDRA and remember to use temp and not julian date???
 fm0 <- multinomPois(~ 1 ~ 1, data = wiptFrame2) #null model
-fm.ls <- multinomPois( ~ 1 + jd + min_after_sun + observer + sky + hear ~ 1 + Tundra + Low_Shrub + Bare_Ground, data = wiptFrame2)
-fm.ts <- multinomPois( ~ 1 + jd + min_after_sun + observer + sky + hear ~ 1 + Tundra + Tall_Shrub_Forest + Bare_Ground, data = wiptFrame2)
+fm.ls <- multinomPois( ~ 1 + jd + min_after_sun + observer + sky + hear ~ 1 + Tundra + Low_Shrub + Bare_Ground + Wetlands, data = wiptFrame2)
+fm.ts <- multinomPois( ~ 1 + jd + min_after_sun + observer + sky + hear ~ 1 + Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands, data = wiptFrame2)
+fm.1 <- multinomPois( ~ 1 + jd + min_after_sun + sky + hear ~ 1 + Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands, data = wiptFrame2)
+fm.2 <- multinomPois( ~ 1 + jd + min_after_sun + sky + hear ~ 1 + Tundra + Low_Shrub + Bare_Ground + Wetlands, data = wiptFrame2)
+fm.3 <- multinomPois( ~ 1 + jd + min_after_sun + hear ~ 1 + Tundra + Low_Shrub + Bare_Ground + Wetlands, data = wiptFrame2)
+fm.4 <- multinomPois( ~ 1 + jd + min_after_sun + hear ~ 1 + Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands, data = wiptFrame2)
+
 
 # rank models by AIC:
 ms2 <- fitList(
   "lam(.)p(.)" = fm0,
-  "lam(Tundra + Low_Shrub + Bare_Ground)p(jd + min_after_sun + observer + sky + hear)" = fm.ls,
-  "lam(Tundra + Tall_Shrub_Forest + Bare_Ground)p(jd + min_after_sun + observer + sky + hear)" = fm.ts)
+  "lam(Tundra + Low_Shrub + Bare_Ground + Wetlands)p(jd + min_after_sun + observer + sky + hear)" = fm.ls,
+  "lam(Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands)p(jd + min_after_sun + observer + sky + hear)" = fm.ts,
+  "lam(Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands)p(jd + min_after_sun + sky + hear)" = fm.1,
+  "lam(Tundra + Low_Shrub + Bare_Ground + Wetlands)p(jd + min_after_sun + sky + hear)" = fm.2,
+  "lam(Tundra + Low_Shrub + Bare_Ground + Wetlands)p(jd + min_after_sun + hear)" = fm.3,
+  "lam(Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands)p(jd + min_after_sun + hear)" = fm.4)
+
 
 (ms2sel <- modSel(ms2))
 
@@ -284,15 +294,33 @@ output.twomin
 
 ### SAVE OUTPUT
 
-# write.csv(output.twomin, here("output/wipt_2min_output.csv"))
+write.csv(output.twomin, here("output/wipt_2min_output.csv"))
 
 
 ### ASSESSING MODEL FIT
 
 
-set.seed(2021)
+set.seed(1122)
 
-fitstats <- function(fm.ts) {
+fitstats.ls <- function(fm.ls) {
+  observed <- getY(fm.ls@data)
+  expected <- fitted(fm.ls)
+  resids <- residuals(fm.ls)
+  sse <- sum(resids^2)
+  chisq <- sum((observed - expected)^2 / expected)
+  freeTuke <- sum((sqrt(observed) - sqrt(expected))^2)
+  out <- c(SSE=sse, Chisq=chisq, freemanTukey=freeTuke)
+  return(out)
+}
+
+
+(gof.fm.ls <- parboot(fm.ls, fitstats.ls, nsim = 1000, report = 1))
+
+print(gof.fm.ls)
+
+### For full tundra model
+
+fitstats.ts <- function(fm.ts) {
   observed <- getY(fm.ts@data)
   expected <- fitted(fm.ts)
   resids <- residuals(fm.ts)
@@ -303,9 +331,9 @@ fitstats <- function(fm.ts) {
   return(out)
 }
 
+(gof.fm.ts <- parboot(fm.ts, fitstats.ts, nsim = 1000, report = 1))
 
-(gof <- parboot(fm.ts, fitstats, nsim = 1000, report = 1))
-
+print(gof.fm.ts)
 save.image(here("workspaces/04_wipt_workspace.RData"))
 
 ### END SCRIPT
