@@ -271,11 +271,12 @@ lc.19.final <- lc.19.final %>%
          Low_Shrub = `Dwarf Scrub`,
          Bare_Ground = `Barren Land (Rock/Sand/Clay)`,
          Tall_Shrub_Forest = `Shrub/Scrub` + `Mixed Forest` + `Deciduous Forest` + `Evergreen Forest`,
-         Wetlands = `Emergent Herbaceous Wetlands` + `Woody Wetlands` + `Open Water`,
-         Developed = `Developed, Low Intensity`)
+         Wetlands = `Emergent Herbaceous Wetlands` + `Woody Wetlands`,
+         Developed = `Developed, Low Intensity`,
+         Open_Water = `Open Water`)
 
 lc.19.fin.clip <- lc.19.final %>%
-  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands, Developed)
+  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands, Developed, Open_Water)
 
 
 
@@ -289,12 +290,13 @@ lc.21.final <- lc.21.final %>%
          Low_Shrub = `Dwarf Scrub`,
          Bare_Ground = `Barren Land (Rock/Sand/Clay)`,
          Tall_Shrub_Forest = `Shrub/Scrub` + `Mixed Forest` + `Deciduous Forest` + `Evergreen Forest` + `Woody Wetlands`,
-         Wetlands = `Emergent Herbaceous Wetlands` + `Open Water`,
-         Developed = `Developed, Low Intensity`)
+         Wetlands = `Emergent Herbaceous Wetlands`,
+         Developed = `Developed, Low Intensity`,
+         Open_Water = `Open Water`)
 
 
 lc.21.fin.clip <- lc.21.final %>%
-  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands, Developed)
+  dplyr::select(id, Tundra, Low_Shrub, Bare_Ground, Tall_Shrub_Forest, Wetlands, Developed, Open_Water)
 
 
 # export as .csvs?
