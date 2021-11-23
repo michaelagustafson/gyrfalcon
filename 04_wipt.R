@@ -265,7 +265,7 @@ wiptFrame2 <- unmarkedFrameMPois(
 #### DON'T KNOW ABOUT USING FULL MODEL B/C OF HIGH CORRELATION BETWEEN SHRUB+TUNDRA and remember to use temp and not julian date???
 fm0 <- multinomPois(~ 1 ~ 1, data = wiptFrame2) #null model
 fm.ls <- multinomPois( ~ 1 + jd + min_after_sun + observer + sky + hear ~ 1 + Tundra + Low_Shrub + Bare_Ground + Wetlands, data = wiptFrame2)
-fm.ts <- multinomPois( ~ 1 + jd + min_after_sun + observer + sky + hear ~ 1 + Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands, data = wiptFrame2)
+fm.ts <- multinomPois( ~ -1 + jd + min_after_sun + observer + sky + hear ~ -1 + Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands, data = wiptFrame2)
 fm.1 <- multinomPois( ~ 1 + jd + min_after_sun + sky + hear ~ 1 + Tundra + Tall_Shrub_Forest + Bare_Ground + Wetlands, data = wiptFrame2)
 fm.2 <- multinomPois( ~ 1 + jd + min_after_sun + sky + hear ~ 1 + Tundra + Low_Shrub + Bare_Ground + Wetlands, data = wiptFrame2)
 fm.3 <- multinomPois( ~ 1 + jd + min_after_sun + hear ~ 1 + Tundra + Low_Shrub + Bare_Ground + Wetlands, data = wiptFrame2)
@@ -335,5 +335,8 @@ fitstats.ts <- function(fm.ts) {
 
 print(gof.fm.ts)
 save.image(here("workspaces/04_wipt_workspace.RData"))
+
+summary(fm.ls)
+
 
 ### END SCRIPT
