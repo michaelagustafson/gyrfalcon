@@ -1,0 +1,123 @@
+---
+title: "02_sunrisetimes"
+author: "Michaela Gustafson"
+date: "12/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Sunrise Times for Nome, AK
+
+### Description:
+Import and clean sunrise times for Nome, AK to be merged with environmental variables data frame
+Sunrise times are from dateandtime.com
+
+## LIBRARY
+Packages used for this code:
+
+```{r library}
+library(here) # for file location
+library(hms) # for making column into a time format
+library(tidyr) # general cleaning/manipulation
+library(dplyr) # general cleaning/manipulation
+```
+
+## IMPORT SUNRISE DATA
+
+#### 2019 Sunrise Times
+
+```{r 19sun}
+sun19 <- read.csv(here("data/sunrise_2019.csv"))
+```
+
+#### 2021 Sunrise Times
+
+```{r}
+sun21 <- read.csv(here("data/sunrise_2021.csv"))
+```
+
+
+## CLEAN SUNRISE DATA
+
+First need add extra 0 to beginning of those with one less character so column 
+can be formatted in hour:min:sec
+
+### 2019 Sunrise Times
+
+```{r}
+# remove colons(:) first so that leading zero can be added
+sun19$sunrise <- base::gsub(":", "", sun19$sunrise) 
+
+# add leading 0
+sun19$sunrise <- base::sprintf("%06d", as.numeric(sun19$sunrise)) 
+
+# separate sunrise times into columns for h:m:s
+sun19 <- tidyr::extract(sun19, 
+                        sunrise, 
+                        into = c("hr", "min", "sec"), 
+                        "(.{2})(.{2})(.{2})", 
+                        remove=FALSE)
+
+# paste h:m:s column together into another column and separate with ':'
+sun19$sunrise <- base::paste(sun19$hr, sun19$min, sun19$sec, sep=":")
+
+# format column so that R recognizes it as time
+sun19$sunrise <- hms::as_hms(sun19$sunrise)
+
+#check structure
+str(sun19)
+
+# keep only date and sunrise times in the df:
+colnames(sun19)
+sun19 <- sun19[c(1, 2)]
+
+# write final sunrise times as a .csv
+write.csv(sun19, here("data/nome_sun19_final.csv"))
+
+```
+
+### 2021 Sunrise Times 
+
+```{r}
+# remove colons in time to be able to add leading 0
+sun21$sunrise <- base::gsub(":", "", sun21$sunrise) 
+head(sun21)
+
+# addextra 0 to 5chr strings of time so column can be formatted in h:m:s
+
+sun21$sunrise <- base::sprintf("%06d", as.numeric(sun21$sunrise)) 
+
+# separate sunrise times into columns for h:m:s
+sun21 <- tidyr::extract(sun21, 
+                        sunrise, 
+                        into = c("hr", "min", "sec"), 
+                        "(.{2})(.{2})(.{2})", 
+                        remove=FALSE)
+
+# paste h:m:s column together into another column and separate with ':'
+sun21$sunrise <- base::paste(sun21$hr, sun21$min, sun21$sec, sep=":")
+
+# format column so that R recognizes it as time
+sun21$sunrise <- hms::as.hms(sun21$sunrise)
+
+#check structure
+str(sun21)
+
+
+# keep only date and sunrise times in the df:
+colnames(sun21)
+sun21 <- sun21[c(1, 2)]
+
+# write final sunrise times as a .csv
+write.csv(sun21, here("data/nome_sun21_final.csv"))
+
+```
+
+
+## END SCRIPT 
+
+
+
