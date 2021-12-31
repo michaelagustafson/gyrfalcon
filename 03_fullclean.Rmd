@@ -1,0 +1,681 @@
+---
+title: "03_fullclean"
+author: "Michaela Gustafson"
+date: "12/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# FULL DATA CLEAN
+
+### Description
+Fully cleaning environmental and observational data from 2019 and 2021. I am doing this step before adding other environmental data such as elevation and habitat for more simplified cleaning and merging of such data later on.
+
+
+## LIBRARY
+Packages used for this code: 
+```{r library}
+library(here) # for file location
+library(dplyr) # general cleaning/manipulation
+library(lubridate) # for Julian date conversion
+library(tidyr) # general cleaning/manipulation
+library(hms) # for making column into a time format
+library(stringr) # for cleaning/manipulation
+```
+
+## IMPORT DATA
+
+Importing previously cleaned environmental and observational datasets from 01_importdata.Rmd
+
+```{r import}
+# I'm using the here package to call a file path instead of setwd(),
+# this makes it easier for others to replicate my code by simply needing to
+# save data files to their own working directory and not have to change 
+# the name of the wd in the code below when calling up files
+
+# 2019 point environmental data
+env.19 <- read.csv(here("data/env_main_19_short.csv")) 
+
+# 2019 point observations
+obs.19 <- read.csv(here("data/obs_main_19_short.csv"))
+
+# 2021 point environmental data
+env.21 <- read.csv(here("data/env_main_21_short.csv")) 
+
+# 2021 point observations
+obs.21 <- read.csv(here("data/obs_main_21_short.csv"))
+
+```
+
+
+## DATA CLEANING
+
+First: Make all data frames similar and subset necessary columns
+
+Keep Road, Unit, Transect, and Point ID columns in order to create unique key identities for each point
+
+Keeping environmental/detection variables: primary observer, date, start time, temp, sky, wind, hearing. Will not be using any distance/direction variables in my time removal abundance model. 
+
+
+### Subset Dataframes
+
+```{r subset}
+## 2019 Point Environmental Data:
+colnames(env.19)
+env.19.sub <- env.19[c(2:6, 8:10, 12:14)]
+
+## 2021 Point Environmental Data:
+colnames(env.21)
+env.21.sub <- env.21[c(2:6, 8:10, 12:13, 15)]
+
+## 2019 Point Observations:
+colnames(obs.19)
+obs.19.sub <- obs.19[c(2:9, 11:13, 16)]
+
+## 2021 Point Observations:
+colnames(obs.21)
+obs.21.sub <- obs.21[c(2:9, 11:14, 17)]
+```
+### CREATE IDENTITY KEY
+
+I need to create matching Identity keys for all tables
+I will do this by concatenating the Road, Unit, Transect, and Point IDs
+I'll use the 'paste' function from the base r package to do this:
+
+```{r idkey}
+## 2019 Environment:
+env.19.sub$Identity <- paste(env.19.sub$Road_ID, 
+                             env.19.sub$UNIT_ID, 
+                             env.19.sub$Transect_ID, 
+                             env.19.sub$Point_ID, 
+                             sep = "_")
+
+# check
+head(env.19.sub)
+
+# 2019 Observations:
+obs.19.sub$Identity <- paste(obs.19.sub$Road_ID, 
+                             obs.19.sub$UNIT_ID, 
+                             obs.19.sub$Transect_ID, 
+                             obs.19.sub$Point_ID, 
+                             sep = "_")
+
+# check
+head(obs.19.sub)
+
+# 2021 Environment:
+env.21.sub$Identity <- paste(env.21.sub$ROAD_ID,
+                             env.21.sub$UNIT_ID,
+                             env.21.sub$TRANSECT_ID,
+                             env.21.sub$POINT_ID,
+                             sep = "_")
+
+#check
+head(env.21.sub)
+
+# 2021 Observations:
+obs.21.sub$Identity <- paste(obs.21.sub$ROAD_ID,
+                             obs.21.sub$UNIT_ID,
+                             obs.21.sub$TRANSECT_ID,
+                             obs.21.sub$POINT_ID,
+                             sep = "_")
+
+#check
+head(obs.21.sub)
+
+```
+
+### ADD JULIAN DATE COLUMN
+
+* Format 'Date' column as a Date
+* Found out that need to change the date from full -2019 to -19 for the year to not convert to 2020 when change to a Date format
+
+```{r juldate}
+## 2019 Environmental
+
+env.19.sub$Date <- gsub("-2019", "-19", env.19.sub$Date)
+
+env.19.sub$Date <- base::as.Date(env.19.sub$Date, 
+                                 format = "%d-%b-%y")
+#check
+str(env.19.sub)
+
+# create Julian date column and convert dates:
+env.19.sub$julian <- base::as.POSIXlt(env.19.sub$Date, 
+                                      format ='%d%b%y')$yday +1
+#check
+head(env.19.sub)
+
+
+## 2021 Environmental
+
+# One row has the wrong year 
+colnames(env.21.sub)
+env.21.sub$SURVEY_DATE <- gsub("-19", "-21", env.21.sub$SURVEY_DATE)
+
+# format 'Date column as Date
+env.21.sub$SURVEY_DATE <- base::as.Date(env.21.sub$SURVEY_DATE, 
+                                        format = "%d-%b-%y")
+#check
+str(env.21.sub)
+
+# create Julian date column and convert dates:
+env.21.sub$julian <- base::as.POSIXlt(env.21.sub$SURVEY_DATE, 
+                                      format = '%d%b%y')$yday +1
+#check
+head(env.21.sub)
+
+```
+
+### FORMAT SURVEY TIME 
+Need to format survey time to be in format of 00:00:00 (h:m:s) in order to calculate how many minutes after sunrise a survey began
+
+#### 2019 Times
+```{r cleanstarttimes19}
+### 2019 Data
+
+# remove ':' that's already in there
+env.19.sub$start_time <- str_replace(env.19.sub$start_time, '[:]', '')
+
+# through trial and error need to change str to integer
+env.19.sub$start_time <- as.integer(env.19.sub$start_time)
+
+# add 00 to end
+env.19.sub$start_time <- base::paste0(env.19.sub$start_time, "00") 
+
+# add leading 0
+env.19.sub$start_time <- sprintf("%06d", as.numeric(env.19.sub$start_time))
+
+# separate sunrise times into columns for h:m:s
+env.19.sub <- tidyr::extract(env.19.sub, 
+                             start_time, 
+                             into = c("hr", "min", "sec"), 
+                             "(.{2})(.{2})(.{2})", 
+                             remove = FALSE)
+
+# paste h:m:s column together into another column and separate with ':'
+env.19.sub$start_time <- base::paste(env.19.sub$hr, 
+                                     env.19.sub$min, 
+                                     env.19.sub$sec, 
+                                     sep = ":")
+
+# format column so that R recognizes it as time
+env.19.sub$start_time <- hms::as_hms(env.19.sub$start_time)
+
+#check structure
+str(env.19.sub$start_time)
+
+```
+
+#### 2021 Times
+```{r cleanstarttimes21}
+## 2021 Data
+
+env.21.sub$START_TIME <- stringr::str_replace(env.21.sub$START_TIME, '[:]', '')
+
+# through trial and error need to change str to integer
+env.21.sub$START_TIME <- as.integer(env.21.sub$START_TIME)
+
+env.21.sub$START_TIME <- base::paste0(env.21.sub$START_TIME, "00") #adds 00 to end
+
+env.21.sub$START_TIME <- base::sprintf("%06d", as.numeric(env.21.sub$START_TIME)) #adds leading 0
+
+# separate sunrise times into columns for h:m:s
+
+env.21.sub <- tidyr::extract(env.21.sub, 
+                             START_TIME, 
+                             into = c("hr", "min", "sec"), 
+                             "(.{2})(.{2})(.{2})", 
+                             remove = FALSE)
+
+# paste h:m:s column together into another column and separate with ':'
+
+env.21.sub$START_TIME <- base::paste(env.21.sub$hr, 
+                                     env.21.sub$min, 
+                                     env.21.sub$sec, 
+                                     sep = ":")
+
+# format column so that R recognizes it as time
+
+env.21.sub$START_TIME <- hms::as_hms(env.21.sub$START_TIME)
+#check structure
+str(env.21.sub$START_TIME)
+```
+
+
+### IMPORT SUNRISE DATA
+
+```{r importsun}
+
+sunrise19 <- read.csv(here("data/nome_sun19_final.csv"))
+# only keep necessary columns
+sunrise19 <- sunrise19[c(2:3)]
+
+# change date to 'Date' format
+sunrise19$date <- base::as.Date(sunrise19$date, 
+                                format = "%d-%b-%y")
+
+sunrise19$sunrise <- hms::as_hms(sunrise19$sunrise)
+
+sunrise21 <- read.csv(here("data/nome_sun21_final.csv"))
+# only keep necessary columns
+sunrise21 <- sunrise21[c(2:3)]
+
+# change date to 'Date' format
+sunrise21$date <- base::as.Date(sunrise21$date, 
+                                format = "%d-%b-%y")
+
+sunrise21$sunrise <- hms::as_hms(sunrise21$sunrise)
+
+```
+
+
+Before I continue with calculating minutes after sunrise column for the survey starts, I'm going to do some cleaning of column names and check for missing/duplicated data
+
+### CHANGE COLUMN NAMES
+
+```{r changenames}
+
+### 2019 Observations
+
+# check column names
+colnames(obs.19.sub)
+
+#create vector of old names
+oldnames.obs19 = c("Road_ID", "UNIT_ID", "Transect_ID", "Point_ID", 
+                   "Year", "Date", "Species_Alpha_Code", "Time_Interval", 
+                   "Exact_Distance", "Distance_category", "Flyover2", 
+                   "Group.size", "Identity")
+
+# create vector of new names
+newnames.obs19 = c("road", "unit", "transect", "point", "year", "date", 
+                   "species", "time_int", "distance", "dist_cat", 
+                   "flyover","count", "id")
+
+
+# run a for loop that replaces names matching those in the old names with new names
+for(i in 1:ncol(obs.19.sub)) names(obs.19.sub)[names(obs.19.sub) == oldnames.obs19[i]] = newnames.obs19[i]
+
+#check
+colnames(obs.19.sub)
+
+
+### 2019 Environmental
+
+# check column names
+colnames(env.19.sub)
+
+#create vector of old names
+oldnames.env19 = c("Road_ID", "UNIT_ID", "Transect_ID", "Point_ID",
+                   "Prim_Obs_initials", "Date", "start_time", "Temp_F", 
+                   "Sky", "Wind", "Hearing", "Identity", "julian")
+
+# create vector of new names
+newnames.env19 = c("road", "unit", "transect", "point", "observer", "date",
+                   "start_time", "tempf", "sky", "wind","hear", "id",
+                   "julian")
+
+# run a for loop that replaces names matching those in the old names with new names
+for(i in 1:ncol(env.19.sub)) names(env.19.sub)[names(env.19.sub) == oldnames.env19[i]] = newnames.env19[i]
+
+#check 
+head(env.19.sub)
+
+
+### 2021 Observations
+
+colnames(obs.21.sub)
+
+oldnames.obs21 = c("ROAD_ID", "UNIT_ID", "TRANSECT_ID", "POINT_ID",
+                   "SURVEY_YEAR", "SURVEY_DATE", "SPECIES_ALPHA_CODE",
+                   "TIME_INTERVAL", "EXACT_DISTANCE", "DISTANCE_CATEGORY",
+                   "FLYOVER", "DISPLAY.USING.AREA", "GROUP_SIZE", "Identity")
+
+newnames.obs21 = c("road", "unit", "transect", "point", "year", "date",
+                   "species", "time_int", "distance", "dist_cat", "flyover",
+                   "display", "count", "id")
+
+for(i in 1:ncol(obs.21.sub)) names(obs.21.sub)[names(obs.21.sub) == oldnames.obs21[i]] = newnames.obs21[i]
+
+### 2021 Environmental
+
+colnames(env.21.sub)
+
+oldnames.env21 = c("ROAD_ID", "UNIT_ID", "TRANSECT_ID", "POINT_ID",
+                   "PRIM_OBS", "SURVEY_DATE", "START_TIME", "TEMP_F",
+                   "SKY", "WIND", "HEARING", "Identity")
+
+newnames.env21 = c("road", "unit", "transect", "point", "observer",
+                   "date", "start_time", "tempf", "sky", "wind", "hear",
+                   "id")
+
+
+for(i in 1:ncol(env.21.sub)) names(env.21.sub)[names(env.21.sub) == oldnames.env21[i]] = newnames.env21[i]
+
+head(env.21.sub)
+
+```
+
+
+### MERGE Sunrise and Environmental DATAFRAMES
+Merge the sunrise data with the environmental data by date
+
+```{r sunenvmerge}
+
+## 2019 Merge
+
+# Will use inner join with the environmental data on the left
+
+# check that column formats are similar
+str(env.19.sub)
+str(sunrise19)
+
+# merge environmental and sunrise data frames
+env.19.merged <- env.19.sub %>%
+  dplyr::inner_join(sunrise19, by = "date")
+
+
+## 2021 Merge
+
+str(env.21.sub)
+str(sunrise21)
+
+# merge environmental and sunrise dataframes
+
+env.21.merged <- env.21.sub %>%
+  dplyr::inner_join(sunrise21, by = "date")
+
+```
+
+### CHECK FOR DUPLICATES AND MISSING DATA
+
+_# _One row was lost in the 2021 merge, which was it:_
+_# anti_join(env_21_sub, env_21_merged)_
+
+_# For some reason TELL_T3_T19_17 on 2019-05-17 is missing_
+_# Oops, put year 2019 for 2021 - will go back up and ammend that._
+
+Above were previous errors that have since been cleaned. Now I am checking again for issues with duplicate/missing data:
+
+```{r duplicates}
+# checking for duplicates:
+dup.19 <- duplicated(env.19.merged)
+dup.21 <- duplicated(env.21.merged)
+
+# using unique to see if there is only false outputs
+unique(dup.19)
+unique(dup.21)
+
+# checking for missing data:
+aj1 <- anti_join(env.19.sub, env.19.merged)
+aj2 <- anti_join(env.21.sub, env.21.merged)
+# no observations in either anit join table
+
+# all looks good
+```
+
+Now I will calculate how many minutes after sunrise each survey began using my merged environmental dataframes
+
+### CALCULATE MIN AFTER SUNRISE
+
+```{r calcminsun}
+### 2019 
+
+colnames(env.19.merged)
+
+# have to combine date and time so it can correctly calculate the difference in time:
+env.19.merged$min_after_sun <- as.numeric(difftime(strptime(paste(env.19.merged[,6], env.19.merged[,7]), "%Y-%m-%d %H:%M:%S"), strptime(paste(env.19.merged[,6], env.19.merged[,17]), "%Y-%m-%d %H:%M:%S"), units = "mins"))
+
+# check
+head(env.19.merged)
+
+
+### 2021 
+
+colnames(env.21.merged)
+
+str(sunrise21)
+str(env.21.merged)
+
+env.21.merged$min_after_sun <- as.numeric(difftime(strptime(paste(env.21.merged[,6], env.21.merged[,7]), "%Y-%m-%d %H:%M:%S"), strptime(paste(env.21.merged[,6], env.21.merged[,17]), "%Y-%m-%d %H:%M:%S"), units = "mins"))
+
+#check
+head(env.21.merged)
+```
+
+### ADD YEAR COLUMN to environmental dataframe and reorder/subset columns
+```{r add year}
+env.19.merged$year <- 2019
+colnames(env.19.merged)
+
+# subset to only necessary columns and reorder columns
+env.19.merged <- env.19.merged[c(15, 6, 16, 19, 7, 18, 5, 11:14)]
+head(env.19.merged)
+
+env.21.merged$year <- 2021
+colnames(env.21.merged)
+
+# subset to only necessary columns and reorder columns
+env.21.merged <- env.21.merged[c(15, 6, 16, 19, 7, 18, 5, 11:14)]
+
+```
+
+
+## FILTER FOR DISTANCE
+
+Survey points were 800m apart. In order to make sure we did not double count individuals, I will only keep observations with distances 400m or less.
+
+I will do this buy subsetting rows based on distance
+
+Distance must be 0 > < 401 (in 2019 data lots of -999 which means they were greater than 400m, but less than 1km away)
+OR dist_cat has a value >0 but must be less than the 201 category which includes individuals seen potentially >400m away (but since they were small prey they were binned into less detailed categories such as these)
+
+
+### 2019
+```{r filterdist}
+## 2019
+
+str(obs.19.sub)
+#check unique values to make sure there are no characters that will be 
+#returned as NAs
+unique(obs.19.sub$distance)
+
+# change 400 + to -999
+# change 100-200 to 150
+# change 'U' to ???? -999
+
+obs.19.sub$distance[obs.19.sub$distance == "400+"] <- "999"
+obs.19.sub$distance[obs.19.sub$distance == "100-200"] <- "150"
+obs.19.sub$distance[obs.19.sub$distance == "U"] <- "999" # looked at original data sheets and birds was far off
+# change -999 to 999
+obs.19.sub$distance[obs.19.sub$distance == "-999"] <- "999"
+
+obs.19.sub$distance <- as.numeric(obs.19.sub$distance)
+
+
+obs.19.dist <- dplyr::filter(obs.19.sub, distance < 401 | dist_cat != "NA")
+
+# last one, filter out dist_cats of 201
+# also annoyed by column with dist cat and 999 in dist
+# if dist_cat !=NA change dist = NA
+
+obs.19.dist <- within(obs.19.dist, distance[distance == '999' & dist_cat != 'NA'] <- 'NA')
+
+# now filter out dist_cats of 201
+
+obs.19.dist <- dplyr::filter(obs.19.dist, dist_cat != "201" | distance != "NA")
+
+# NOW filter out flyovers:
+
+obs.19.dist <- dplyr::filter(obs.19.dist, flyover != "Y")
+
+# okay, think we've got distance filter sorted out. woof.
+# this is why entering data is just as important. Ugh. I hate cleaning.
+
+```
+
+### 2021
+
+```{r}
+str(obs.21.sub) #distance is already in interval... change to numeric?
+
+unique(obs.21.sub$distance)
+
+obs.21.dist <- dplyr::filter(obs.21.sub, distance < 401 | dist_cat != "NA")
+
+# now filter out dist_cats of 201
+
+obs.21.dist <- dplyr::filter(obs.21.dist, dist_cat != "201" | distance != "NA")
+
+# okay this looks good too
+# NOW filter out flyovers that aren't displays
+
+obs.21.dist <- dplyr::filter(obs.21.dist, flyover != "Y" | display == "Y")
+
+# Okay now I think finally done.
+### JOIN YEAR FRAMES ----------------------------
+
+obs.19.dist$display <- "NA"
+
+
+#reorder columns and getting rid of unecessary columns
+colnames(obs.19.dist)
+obs.19.dist <- obs.19.dist[c(13, 5, 7:12, 14)]
+head(obs.19.dist)
+
+colnames(obs.21.dist)
+obs.21.dist <- obs.21.dist[c(14, 5, 7:11, 13, 12)]
+head(obs.21.dist)
+
+# now append tables together
+
+all.obs <- rbind(obs.19.dist, obs.21.dist)
+head(all.obs)
+
+```
+
+### COMBINE 2019 & 2021 Environmental Data
+
+```{r env combine}
+## Merge environmental
+
+# now clean environmental data and combine
+head(env.19.merged); head(env.21.merged)
+
+
+# get rid of start time, date since i'll be using julian and min after sun
+colnames(env.19.merged)
+env.19.final <- env.19.merged[c(1, 3:4, 6:11)]
+
+colnames(env.21.merged)
+env.21.final <- env.21.merged[c(1, 3:4, 6:11)]
+
+
+head(env.19.final); head(env.21.final)
+
+str(env.19.final); str(env.21.final)
+# change env.21 temp to integer so that it has the same level of
+# units/decimals as 2019 data. Changing to an integer will round 
+# to the nearest whole number.
+env.21.final$tempf <- as.integer(env.21.final$tempf)
+head(env.21.final)
+str(env.21.final)
+
+
+# rbind dataframes together
+
+all.env <- rbind(env.19.final, env.21.final)
+head(all.env)
+
+
+# check structure:
+str(all.env)
+
+```
+# CHECK FOR MISSING ENTRIES
+```{r misschecks}
+
+### CHECK FOR MISSING IDS BETWEEN DATAFRAMES ----
+
+missing.id1 <- anti_join(all.env, all.obs)
+missing.id2 <- anti_join(all.obs, all.env)
+
+
+## misspelled?
+#COUN_3_12_4
+#COUN_C3_T3_10 MISSING ENTIRELY FROM ENV.ALL
+
+# fix spelling error:
+
+all.env$id[all.env$id == 'COUN _3_12_4'] <- 'COUN_3_12_4'
+all.obs$id[all.obs$id == 'COUN _3_12_4'] <- 'COUN_3_12_4'
+
+missing.check <- anti_join(all.obs, all.env)
+missing.check2 <- anti_join(all.env, all.obs)
+
+# will fix not entered/no species detected points in a separate .csv and import back in
+# write.csv(missing.check2, here("data/missing_points.csv"))
+```
+
+### ADD MISSING DATA
+Some observations from 2019 were not entered and some points were taken out entirely because they did not have any individuals under 400m so I am also adding those key ids back in with 'NOSPP' in the 'species' column for no species detected
+
+```{r missing}
+# read in .csv
+missing.obs <- read.csv(here("data/missing_points.csv"))
+
+# take out unecessary column
+missing.obs <- missing.obs[,c(1,2, 4:9)]
+# add display column to match all.obs dataframe
+missing.obs$display <- "N"
+
+# append to 'all.obs'
+all.obs <- rbind(all.obs, missing.obs)
+
+```
+
+## CLEAN AND CHECK SPECIES LIST
+Now I need to go through and make sure all species codes match. Sometimes for unknown or general classifications different codes were used.
+
+```{r spp}
+### GET LENGTH OF UNIQUE SPP VALUES -------------
+
+species <- all.obs$species
+spp.counts <- as.data.frame(table(species))
+
+# exported to a csv so that I could find errors more quickly, make not of them, then fix them in R below
+#write.csv(spp.counts, here("output/spp_counts2.csv"))
+
+### FIX INCORRECT SPECIES NAMES -----------------
+#names(data)[names(data) == "oldVariableName"] <- "newVariableName"
+all.obs$species[all.obs$species == "AGPL"] <- "AMGP"
+all.obs$species[all.obs$species == "ARMO"] <- "AMRO"
+all.obs$species[all.obs$species == "PGPL"] <- "PAGP"
+all.obs$species[all.obs$species == "UNKNOWN PTARM"] <- "PTARM"
+all.obs$species[all.obs$species == "WCP"] <- "WCSP"
+all.obs$species[all.obs$species == "SHORE"] <- "SHOREBIRD"
+all.obs$species[all.obs$species == "UNK"] <- "UNKNP"
+
+# check
+species2 <- all.obs$species
+spp.counts2 <- as.data.frame(table(species2))
+```
+
+## SAVE AS NEW CSVs
+
+Now save cleaned tables to be used for species specific analysis
+```{r save}
+### SAVE DATAFRAMES -----------------------------
+
+write.csv(all.obs, here("data/all_obs.csv"))
+write.csv(all.env, here("data/all_env.csv"))
+          
+```
+
+Next: I will be adding elevation and habitat data to the 'all.env' dataframe
+
+
+# END SCRIPT
