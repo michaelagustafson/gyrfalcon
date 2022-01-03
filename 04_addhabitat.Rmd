@@ -41,28 +41,25 @@ I will be selecting out the files that have the land cover for 2014. The four ti
 
 ```{r landcover}
 
-test.tif.14 <- terra::rast(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh04v01_2014.tif"))
+test.tif.14 <- raster::raster(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh04v01_2014.tif"))
 plot(test.tif.14)
 
-test.tif2.14 <- terra::rast(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh04v02_2014.tif"))
+test.tif2.14 <- raster::raster(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh04v02_2014.tif"))
 plot(test.tif2.14)
 
-test.tif3.14 <- terra::rast(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh03v01_2014.tif"))
+test.tif3.14 <- raster::raster(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh03v01_2014.tif"))
 plot(test.tif3.14)
 
-test.tif4.14 <- terra::rast(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh03v02_2014.tif"))
+test.tif4.14 <- raster::raster(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh03v02_2014.tif"))
 plot(test.tif4.14)
 
-?src
-m <- terra::mosaic(test.tif.14, test.tif2.14, test.tif3.14, test.tif4.14)
+
+r <- raster::merge(test.tif.14, test.tif2.14, test.tif3.14, test.tif4.14)
 
 
-plot(m)
-crs(m)
-
-r <- raster::raster(m)
-st_crs(r)
+plot(r)
 crs(r)
+
 ```
 
 
@@ -295,19 +292,35 @@ lc_stack <- mask(lc_stack, siteC_ec)
 
 5. Run focal function to get how much area is covered by each land cover type in the buffer size of 390m (13x13 30m cells)
 ```{r focalsum}
+# run a for loop that will use the focal function to calculate the percentage of each habitat type within our 390m square buffer.
 
+# first need to create empty lists that the data from the for loop will be stored in
 lc_stack2 <- list()
 lc_stack3 <- list()
 
+# heres the loop
 for(i in 1:length(lc_stack)){
   lc_stack2[[i]] <- focal(lc_stack[[i]], w=matrix(1, nrow=13, ncol=13), fun=sum, na.rm=TRUE)
   lc_stack3[[i]] <- (lc_stack2[[i]]/169)
 }
 
-eg.focal <- focal(egforest, w=matrix(1, nrow=13, ncol=13), fun=sum, na.rm = TRUE)
+# restack the layers
+lc_stack3 <- raster::stack(lc_stack3)
+# now change the names of the columns to match what habitat type they actually are
+names(lc_stack3) <- c("egforest", "decforest", "mixforest", "woodland", "lowshrub", "tallshrub", "openshrub", "tundra", "tussock", 'sparseveg', 'fen', 'bog', 'littoral', 'barren', 'water')
 
-eg.focal2 <- (eg.focal[[1]]/169)
-plot(eg.focal2)
+
+# test plot
+plot(lc_stack3[[3]])
+
+
+# save each layer as it own tif
+setwd(here())
+writeRaster(lc_stack3, filename=names(lc_stack3), bylayer=TRUE, format="GTiff", overwrite = TRUE)
+
+
 ```
+
+## EXTRACT LAND COVER VALUES FOR EACH SURVEY POINT
 
 
