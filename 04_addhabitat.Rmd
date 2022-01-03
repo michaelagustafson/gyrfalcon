@@ -321,6 +321,4 @@ writeRaster(lc_stack3, filename=names(lc_stack3), bylayer=TRUE, format="GTiff", 
 
 ```
 
-## EXTRACT LAND COVER VALUES FOR EACH SURVEY POINT
-
-
+## IN NEXT CODE: EXTRACT LAND COVER VALUES FOR EACH SURVEY POINT
