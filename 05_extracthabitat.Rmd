@@ -1,0 +1,344 @@
+---
+title: "05_extracthabitat"
+author: "Michaela Gustafson"
+date: "1/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Extract Habitat Data for Survey Points
+In this code I will extract the percentage of each land cover type (which has already been calculated through the focal function ran in the previous script) for each survey point to be added to the environmental variables.
+
+I will be combining some land cover types to make more broad categories using the following criteria:
+
+I will group land cover types as so:
+Tundra = `Herbaceous`
+Tussock = `Tussock Tundra`
+Low_Shrub = `Low Shrub`
+Bare_Ground = `Barren` + `Sparsely Vegetated`
+Tall_Shrub = `Tall Shrub`
+Open_Shrub = `Open Shrubs`
+Forest = `Deciduous Forest` + `Evergreen Forest` + `Mixed Forest` + 'Woodland'
+Wetland = `Fen` + `Shallows/littoral`
+Water = 'Water'
+
+## LIBRARY
+These are the packages used in this code:
+```{r library}
+library(terra)
+library(sf)
+library(sp)
+library(here)
+library(rgdal)
+library(ggplot2)
+library(tidyverse)
+library(raster)
+library(taRifx)
+library(tidyr)
+library(dplyr)
+library(stringr)
+```
+
+## IMPORT LAND COVER RASTERS
+
+```{r}
+# create a list of all .tif files (I know the land cover ones are the only ones listed in my wd)
+lc.list <- list.files(here(), pattern = ".tif")
+# create a raster stack from the rasters in the list
+lc.stack <- raster::stack(lc.list)
+
+#check
+plot(lc.stack[[7]])
+```
+
+## IMPORT SURVEY LOCATIONS
+
+2019 survey locations are in lat/lon. 2021 survey locations are in UTMs.
+I will be converting 2021 points to lat/lon.
+
+
+### 2019
+
+The recorded lat/lon ended up being in weird locations so I pulled the lat/lon directly from the gps (finalwp_2019.csv) and will be matching the lat/lon waypoints with those recorded in the orignial data sheet ("Point_Count_Env_2019_MG_cleaned.csv")
+
+In 2019 data, there are points not taken for some survey locations so I will be importing the predetermined lat/lon locations for those from the file imported from the GPS (originalpoints_2019.csv)
+
+At the moment, not sure what I used the backup points for...
+
+```{r pointimport}
+
+points.19 <- read.csv(here("data/Point_Count_Env_2019_MG_cleaned.csv"))
+gpx.19 <- read.csv(here("data/finalwp_2019.csv"))
+ogpoints.19 <- read.csv("C:/Gyrfalcon/gyrfalcon/data/originalpoints_2019.csv", skip = 22)
+backup.19 <- read.csv("C:/Gyrfalcon/gyrfalcon/data/GPS002_2019backup.csv", skip = 22)
+
+# There are extra '1' at the end of the waypoint number names, need to remove them so the key id will match when merging dataframes
+backup.19$name = str_remove(backup.19$name, "^0")
+
+
+# match key id names
+gpx.19 <- rename(gpx.19, Waypoint_num = name)
+# add leading zero to key id in points.19 to match key id (Waypoint Name)
+points.19$Waypoint_num <- str_pad(points.19$Waypoint_num, 3, pad = "0")
+# join points and locations from GPS together
+points.gpx.join <- left_join(points.19, gpx.19)
+
+# create id key column
+points.gpx.join$id <- paste(points.gpx.join$Road_ID, points.gpx.join$UNIT_ID, points.gpx.join$Transect_ID, points.gpx.join$Point_ID, sep = "_")
+head(points.gpx.join)
+
+
+colnames(points.gpx.join)
+
+# only keep columns need
+points.2019 <- points.gpx.join[,c(35, 28:29)]
+head(points.2019)
+# lat lon are empty because I will be pulling that data in from the correct gpx file or original points file. 
+
+# separating out the first 17 surveyed points that don't have matching waypoint
+# names in the gps files
+missing.points <- points.gpx.join[c(1:17),]
+
+# separate into KOUG and TELL points for naming purposes
+miss.points.koug <- missing.points[c(1:11),]
+miss.points.tell <- missing.points[c(12:17),]
+# Need id names to match those on the points gpx
+
+# Add K or T to column characters respectively so that columns have matching id keys
+# and I can bind/join table together 
+miss.points.koug$UNIT_ID <- paste("K", miss.points.koug$UNIT_ID, sep = "")
+miss.points.tell$UNIT_ID <- paste("T", miss.points.tell$UNIT_ID, sep = "")
+miss.points.koug$Transect_ID <- paste("T", miss.points.koug$Transect_ID, sep = "")
+miss.points.tell$Transect_ID <- paste("T", miss.points.tell$Transect_ID, sep = "")
+
+
+# bind all points back together into one dataframe
+missing.points <- rbind(miss.points.koug, miss.points.tell)
+
+# create the universal id column in the dataframe of missing points
+missing.points$name <- paste(missing.points$UNIT_ID, missing.points$Transect_ID, missing.points$Point_ID, sep = "_")
+
+# join the missing points to dataframe to data taken off GPS to get true lat/lon
+# for these points
+miss.og.point.join <- left_join(missing.points, ogpoints.19, by = "name")
+
+
+# only keep columns needed and rename them
+colnames(miss.og.point.join)
+miss.og.points <- miss.og.point.join[,c(36, 38,39)]
+miss.og.points <- rename(miss.og.points, "lat" = "lat.y")
+miss.og.points <- rename(miss.og.points, "lon" = "lon.y")
+miss.og.points <- rename(miss.og.points, "id" = "name")
+
+
+### NEED TO CHANGE Column ID NAMES BACK TO MATCH POINTS 2019
+
+koug.names <- as.data.frame(miss.points.koug$id)
+koug.names <- rename(koug.names, 'id' = 'miss.points.koug$id')
+tell.names <- as.data.frame(miss.points.tell$id)
+tell.names <- rename(tell.names, 'id' = 'miss.points.tell$id')
+miss.names <- rbind(koug.names, tell.names)
+
+
+miss.og.points$id <- miss.names$id
+str(miss.og.points)
+
+#######################################################################
+# remove those incorrect 'missing points' from the dataframe so I can correctly add them in later
+points.2019 <- points.2019[complete.cases(points.2019),]
+
+# add corrected points with true lat/lon
+points.2019.all <- rbind(miss.og.points, points.2019)
+
+# save CSV of these fixed points and full df for safe keeping
+write.csv(points.2019.all, here("data/points_2019_all_FINAL.csv"))
+
+## assign crs
+points19.sf <- st_as_sf(points.2019.all, 
+                        coords = c("lon", "lat"),
+                        crs = 4326)
+
+plot(st_geometry(points19.sf))
+
+crs(points19.sf)
+
+st_is_valid(points19.sf)
+
+##############################################################
+# reproject points to same crs as hab raster
+
+#st_transform
+
+# 2019 points
+points19.proj <- st_transform(points19.sf, crs(lc.stack))
+st_crs(points19.proj)
+plot(points19.proj)
+
+```
+### 2021
+
+```{r 21points}
+
+points.21 <- read.csv(here("data/Point_Count_Env_2021_MG.csv"))
+head(points.21); dim(points.21)
+
+# subset id and utms
+colnames(points.21)
+points.21 <- points.21[,c(1:4, 19:20)]
+points.21$id <- paste(points.21$ROAD_ID, points.21$UNIT_ID, points.21$TRANSECT_ID, points.21$POINT_ID, sep = "_")
+
+head(points.21)
+#subset again to keep only final key id and utms
+points.21 <- points.21[,c(7, 5:6)]
+head(points.21); dim(points.21)
+# export for safe keeping
+# write.csv(points.21, here("data/utms_21_final.csv"))
+
+st_crs(points.21)
+# need to assign crs
+# points were taken in UTM UPS, NAD 83, GRS 80
+# epsg code: https://epsg.io/26903
+
+points.21.sf <- st_as_sf(points.21, 
+                         coords = c("UTM1", "UTM2"),
+                         crs = 26903)
+
+st_crs(points.21.sf)
+plot(points.21.sf)
+
+st_is_valid(points.21.sf)
+
+
+
+# reproject 2021 points to match hab raster crs
+points21.proj <- st_transform(points.21.sf, crs(lc.stack))
+st_crs(points21.proj)
+
+
+plot(points21.proj)
+
+
+# CHECK THAT ALL POINTS LOOK OKAY
+plot(lc.stack[[1]])
+plot(points19.proj, add = TRUE)
+plot(points21.proj[1], add = TRUE)
+
+```
+
+
+## EXTRACT VALUES AT EACH SURVEY POINT
+Since we have already calculated the percentage of land cover within a 390m buffer using the focal function, we can now just extract the values at each point without having to do another buffer/function.
+
+1. Extract raster values at each point location
+```{r extract}
+
+lc.19 <- raster::extract(lc.stack, points19.proj)
+lc.21 <- raster::extract(lc.stack, points21.proj)
+```
+
+
+2. Turn matrices into tables/dataframes
+
+```{r}
+lc19.join <- as.data.frame(cbind(points19.proj, lc.19))
+lc21.join <- as.data.frame(cbind(points21.proj, lc.21))
+
+```
+
+
+3. Merge (add) land cover types into specified groups
+```{r}
+# 2019
+colnames(lc19.join)
+
+lc19.join2 <- lc19.join %>%
+  mutate(forest = egforest + decforest + mixforest + woodland,
+         bare = barren + sparseveg,
+         wetland = bog + fen + littoral)
+
+# take out extra columns (ones that were added toether) and reorder
+colnames(lc19.join2)
+lc19.join3 <- lc19.join2[,c(1, 13, 14, 8, 12, 10, 19, 18, 20, 15, 17)]
+# 2021
+colnames(lc21.join)
+
+lc21.join2 <- lc21.join %>%
+  mutate(forest = egforest + decforest + mixforest + woodland,
+         bare = barren + sparseveg,
+         wetland = bog + fen + littoral)
+
+colnames(lc21.join2)
+lc21.join3 <- lc21.join2[,c(1, 13, 14, 8, 12, 10, 19, 18, 20, 15, 17)]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
