@@ -1,0 +1,192 @@
+---
+title: "06_addelevation"
+author: "Michaela Gustafson"
+date: "1/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Adding Elevation to Environmental Data
+
+In this code, I will be running a focal function over a DEM (digital elevation model) of the study are on the Seward Peninsula to calculate the mean elevation within a 390m buffer. From the focal(ized) raster, I will extract mean elevation at each survey point. 
+
+
+## LIBRARY
+These are the packages used in this code:
+```{r library}
+library(terra)
+library(raster)
+library(sf)
+library(sp)
+library(here)
+library(ggplot2)
+library(tidyverse)
+library(raster)
+library(taRifx)
+library(tidyr)
+library(dplyr)
+library(stringr)
+
+```
+
+
+## IMPORT DEM
+
+```{r dem}
+ak_dem <- rast(here("data/DEM_Michaela/DEM_Michaela/dsm_mosaic_AK.tif"))
+plot(ak_dem)
+
+crs(ak_dem)
+
+```
+
+## IMPORT SURVEY POINTS
+
+```{r importpoints}
+# 2019
+points19 <- read.csv(here("data/points_2019_all_FINAL.csv"))
+## make shapefile and assign crs
+points19.sf <- st_as_sf(points19, 
+                        coords = c("lon", "lat"),
+                        crs = 4326)
+
+plot(st_geometry(points19.sf))
+
+st_crs(points19.sf)
+
+st_is_valid(points19.sf)
+
+# 2021
+
+points21 <- read.csv(here("data/utms_21_final.csv"))
+points21 <- points21[,c(2:4)]
+
+# need to assign crs
+# points were taken in UTM UPS, NAD 83, GRS 80
+# epsg code: https://epsg.io/26903
+
+points21.sf <- st_as_sf(points21, 
+                         coords = c("UTM1", "UTM2"),
+                         crs = 26903)
+
+st_crs(points21.sf)
+plot(points21.sf)
+
+st_is_valid(points21.sf)
+
+
+
+```
+
+### Make sure in same CRS as DEM
+Make sure that CRS of point data matches with elevation raster
+
+```{r reproject}
+
+# reproject points to same crs as hab raster
+
+#st_transform
+
+# 2019 points
+points19.proj <- st_transform(points19.sf, crs(ak_dem))
+st_crs(points19.proj)
+plot(points19.proj)
+
+# reproject 2021 points to match hab raster crs
+points21.proj <- st_transform(points21.sf, crs(ak_dem))
+st_crs(points21.proj)
+plot(points21.proj)
+
+
+# check
+plot(ak_dem)
+plot(points19.proj, add = TRUE)
+plot(points21.proj, add = TRUE)
+```
+
+## FOCAL FOR MEAN ELEVATION
+```{r focal}
+?terra::focal
+ak.dem.focal <- terra::focal(ak_dem, w = matrix(1, nc=13, nr=13), fun = mean, na.rm = TRUE)
+plot(ak_dem)
+plot(ak.dem.focal)
+```
+## EXTRACT ELEVATION AT EACH POINT
+Now we will extract the elevation at each survey point to get the mean elevation within a 390m buffer (this comes from extracting from the focal raster)
+
+```{r extract}
+?terra::extract
+
+# first need to turn points into SpatVectors
+
+points19.vect <- terra::vect(points19.proj)
+points21.vect <- terra::vect(points21.proj)
+
+elev.19 <- terra::extract(ak.dem.focal, points19.vect)
+elev.21 <- terra::extract(ak.dem.focal, points21.vect)
+```
+
+
+### REJOIN WITH ORIGINAL IDs
+
+```{r join}
+elev19.join <- as.data.frame(cbind(points19.proj, elev.19))
+elev21.join <- as.data.frame(cbind(points21.proj, elev.21))
+```
+
+
+### CLEAN UP
+Clean up the final dataframe. Change eleveation column name, remove unecessary id column.
+
+```{r clean}
+# 2019
+
+colnames(elev19.join)
+elev19final <- elev19.join[,c(2,4)]
+# check
+head(elev19final)
+
+# rename elevation column
+elev19final <- rename(elev19final, elev = dsm_mosaic_AK)
+
+# check
+head(elev19final)
+
+# 2021
+colnames(elev21.join)
+# select only the columns I want to keep
+elev21final <- elev21.join[,c(1, 3)]
+# check
+head(elev21final)
+
+# change elevation column name
+elev21final <- rename(elev21final, elev = dsm_mosaic_AK)
+
+# check
+head(elev21final)
+```
+
+#### Export elevation files
+
+```{r export}
+write.csv(elev19final, here("data/mean_elev_19.csv"))
+write.csv(elev21final, here("data/mean_elev_21.csv"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
