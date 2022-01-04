@@ -1,0 +1,97 @@
+---
+title: "07_finalenvjoin"
+author: "Michaela Gustafson"
+date: "1/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# FINAL JOIN OF ENVIRONMENTAL VARIABLES
+
+In this code I will be joining my extracted land cover and elevation values to my full environmental dataset to be used in my time removal models.
+
+
+1. Import full environmental dataframe
+2. Import 2019&2021 land cover data
+3. Import 2019&2021 mean elevation data
+4. Merge and export dataframe
+
+
+## LIBRARY
+These are the following packages used in this code:
+```{r library}
+library(here) # the here function automatically sets your current project as your working directory
+library(dplyr) # for manipulating data
+```
+
+
+## 1. Import environmental dataframe
+Importing from previous cleaning code "data/all_env.csv"
+```{r envimport}
+all.env <- read.csv(here("data/all_env.csv"))
+# take out added 'X' column
+colnames(all.env)
+all.env <- all.env[,c(2:10)]
+# check
+head(all.env)
+
+
+```
+
+### 2. Import land cover
+
+```{r lc}
+lc19 <- read.csv(here("data/landcover_19.csv"))
+lc21 <- read.csv(here("data/landcover_21.csv"))
+
+# Bind years together
+
+all.lc <- rbind(lc19, lc21)
+
+# get rid of extra 'X' column from import
+colnames(all.lc)
+all.lc <- all.lc[,c(2:11)]
+
+# check
+head(all.lc); dim(all.lc)
+
+```
+
+
+### 3. Import mean elevation
+```{r elev}
+elev19 <- read.csv(here("data/mean_elev_19.csv"))
+elev21 <- read.csv(here("data/mean_elev_21.csv"))
+
+# bind years together
+all.elev <- rbind(elev19, elev21)
+
+# get rid of unecessary 'X' column
+colnames(all.elev)
+
+all.elev <- all.elev[,c(2:3)]
+
+# check
+head(all.elev); dim(all.elev)
+
+```
+
+
+### 4. Merge land cover and elevation to all environmental
+
+```{r allmerge}
+all.env2 <- left_join(all.env, all.lc, by = 'id')
+all.env3 <- left_join(all.env2, all.elev, by = 'id')
+
+### export final dataframe:
+
+write.csv(all.env3, here("data/all.env.FINAL.csv"))
+```
+
+
+# END CODE
+
+
