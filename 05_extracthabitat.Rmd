@@ -32,7 +32,6 @@ library(terra)
 library(sf)
 library(sp)
 library(here)
-library(rgdal)
 library(ggplot2)
 library(tidyverse)
 library(raster)
@@ -195,7 +194,7 @@ head(points.21)
 points.21 <- points.21[,c(7, 5:6)]
 head(points.21); dim(points.21)
 # export for safe keeping
-# write.csv(points.21, here("data/utms_21_final.csv"))
+write.csv(points.21, here("data/utms_21_final.csv"))
 
 st_crs(points.21)
 # need to assign crs
@@ -240,7 +239,7 @@ lc.21 <- raster::extract(lc.stack, points21.proj)
 ```
 
 
-2. Turn matrices into tables/dataframes
+2. Turn matrices into tables/dataframes and join with original point ids
 
 ```{r}
 lc19.join <- as.data.frame(cbind(points19.proj, lc.19))
@@ -261,7 +260,7 @@ lc19.join2 <- lc19.join %>%
 
 # take out extra columns (ones that were added toether) and reorder
 colnames(lc19.join2)
-lc19.join3 <- lc19.join2[,c(1, 13, 14, 8, 12, 10, 19, 18, 20, 15, 17)]
+lc19.join3 <- lc19.join2[,c(1, 13, 14, 8, 12, 10, 19, 18, 20, 15)]
 # 2021
 colnames(lc21.join)
 
@@ -271,14 +270,18 @@ lc21.join2 <- lc21.join %>%
          wetland = bog + fen + littoral)
 
 colnames(lc21.join2)
-lc21.join3 <- lc21.join2[,c(1, 13, 14, 8, 12, 10, 19, 18, 20, 15, 17)]
+lc21.join3 <- lc21.join2[,c(1, 13, 14, 8, 12, 10, 19, 18, 20, 15)]
+```
+
+## EXPORT EXTRACTED LAND COVER VALUES
+
+```{r export}
+write.csv(lc19.join3, here("data/landcover_19.csv"))
+write.csv(lc21.join3, here("data/landcover_21.csv"))
 ```
 
 
-
-
-
-
+# END CODE
 
 
 
