@@ -116,7 +116,7 @@ lc_stack <- mask(lc_stack, siteC_ec)
 
 
 5. Run focal function to get how much area is covered by each land cover type in the buffer size of 390m (13x13 30m cells)
-```{r focalsum}
+```{r focalsum, eval = FALSE}
 # run a for loop that will use the focal function to calculate the percentage of each habitat type within our 390m square buffer.
 
 # first need to create empty lists that the data from the for loop will be stored in
