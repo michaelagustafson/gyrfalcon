@@ -38,7 +38,29 @@ all.env <- all.env[,c(2:10)]
 # check
 head(all.env)
 
+### Putting in another cleaning section here so I don't have to completely rerun like 6 other painstakingly long codes
 
+##### NEED TO CHANGE SKY VARIABLE TO HIGHEST NUMBER
+
+str(all.env)
+all.env$sky <- as.factor(all.env$sky)
+
+
+# going to have to use dsub and do it for each character string of multiple categories
+unique(all.env$sky)
+
+all.env$sky <- gsub("2,3,4", "4", all.env$sky)
+all.env$sky <- gsub("3,4", "4", all.env$sky)
+all.env$sky <- gsub("2,4", "4", all.env$sky)
+all.env$sky <- gsub("2,3", "3", all.env$sky)
+all.env$sky <- gsub("0,3", "3", all.env$sky)
+all.env$sky <- gsub("1,3", "3", all.env$sky)
+all.env$sky <- gsub("3,0", "3", all.env$sky)
+all.env$sky <- gsub("3,", "3", all.env$sky)
+
+unique(all.env$sky)
+
+all.env$sky <- as.factor(all.env$sky)
 ```
 
 ### 2. Import land cover
