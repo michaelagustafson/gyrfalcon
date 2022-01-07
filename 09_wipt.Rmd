@@ -1,0 +1,248 @@
+---
+title: "09_wipt"
+author: "Michaela Gustafson"
+date: "1/6/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## TIME REMOVAL ANALYSIS: WILLOW PTARMIGAN
+
+In this code I will be running my time-removal abundance model for Willow Ptarmigan.
+
+This is a multinomial N-mixture model.
+
+## LIBRARY
+These are the packages used in the following code:
+```{r library}
+library(here) # for locating filepath
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(unmarked)
+library(AICcmodavg)
+```
+
+
+## LOAD OBSERVATION and ENVIRONMENTAL DATA
+
+```{r loaddata}
+all.obs <- read.csv(here("data/all_obs.csv"))
+all.env <- read.csv(here("data/all_env_FINAL.csv"))
+
+# inspect
+
+head(all.obs)
+head(all.env)
+
+# get rid of extra 'X' column added from import
+
+all.obs <- all.obs[,c(2:10)]
+all.env <- all.env[,c(2:20)]
+
+# check
+head(all.obs)
+head(all.env)
+
+# looks good
+```
+## PREP OBSERVATION DATA FOR SELECTED SPECIES
+
+```{r wiptprep}
+# copy data table for SQUIR
+
+wipt <- data.frame(all.obs)
+
+# change all species codes of WIPT to a 1 and all other species to 0
+wipt$species[wipt$species == "WIPT"] <- 1
+wipt$species[wipt$species != "1"] <- 0
+
+# change count to 0 for non WIPT
+wipt$count[wipt$species == 0] <- 0
+head(wipt)
+# now 'wipt' df represents counts for Willow Ptarmigan
+
+# check for na values
+sum(is.na(wipt$time_int))
+
+
+# change time intervals to reflect intervals of 2 minutes
+wipt2 <- mutate(wipt, 
+                time_int = ifelse(wipt$time_int %in% 0:1, "1", 
+                                  ifelse(wipt$time_int %in% 2:3, "2", 
+                                         ifelse(wipt$time_int %in% 4:5, "3",
+                                                ifelse(wipt$time_int %in% 6:7, "4",
+                                                       ifelse(wipt$time_int %in% 8:9, "5", "NA"))))))
+
+
+# aggregate rows and sum counts for matching keys and time intervals
+# must change formats first:
+
+str(wipt2)
+
+wipt2$id <- as.factor(wipt2$id)
+wipt2$time_int <- as.factor(wipt2$time_int)
+wipt2$count <- as.integer(wipt2$count)
+
+wipt.agg <- aggregate(x = wipt2$count, 
+                      by = list(wipt2$id, wipt2$time_int), 
+                      FUN = sum)
+
+
+
+
+# rename columns in aggregated df
+
+head(wipt.agg)
+
+names(wipt.agg)[names(wipt.agg) == "Group.1"] <- "id"
+names(wipt.agg)[names(wipt.agg) == "Group.2"] <- "time_int"
+names(wipt.agg)[names(wipt.agg) == "x"] <- "count"
+
+head(wipt.agg)
+
+# okay so wipt.agg is our count dataframe, we don't need any of the other columns,
+# those were only used to help filter out for distance and flyover observatiosn
+
+# check that ids are matching between env and obs
+# need to change id to a factor to use anti-join
+all.env$id <- as.factor(all.env$id)
+miss1 <- anti_join(all.env, wipt.agg) # clear
+miss2 <- anti_join(wipt.agg, all.env) # clear
+
+
+
+# spread dataframes:
+
+unique(wipt.agg$id) # should end up with 916 rows
+
+
+wipt.wide <- wipt.agg %>%
+  dplyr::select(id, time_int, count) %>%
+  spread(key = time_int, value = count, fill = 0)
+
+
+
+```
+
+### PREP ENVIRONMENTAL DATA
+```{r prepenv}
+# check structure of variables
+
+str(all.env) 
+all.env$sky <- as.factor(all.env$sky)
+all.env$year <- as.factor(all.env$year)
+all.env$observer <- as.factor(all.env$observer)
+all.env$hear <- as.factor(all.env$hear)
+
+```
+
+
+## CHECK DATA FOR CORRELATIONS
+
+Do not need to repeat this part since environmental data is the exact same as in the first code run for ground squirrels
+
+### BUT DO NEED TO SCALE PREDICTORS
+I will export the scaled environmental dataframe for use in future codes
+
+```{r scaledf}
+# scale numerical predictors
+#scale predictors:
+str(all.env)
+
+jul.scaled <- scale(all.env$julian)
+min.scaled <- scale(all.env$min_after_sun)
+temp.scaled <- scale(as.numeric(all.env$tempf))
+wind.scaled <- scale(all.env$wind)
+t.scaled <- scale(all.env$tundra)
+tuss.scaled <- scale(all.env$tussock)
+ls.scaled <- scale(all.env$lowshrub)
+ts.scaled <- scale(all.env$tallshrub)
+os.scaled <- scale(all.env$openshrub)
+b.scaled <- scale(all.env$bare)
+f.scaled <- scale(all.env$forest)
+wl.scaled <- scale(all.env$wetland)
+wat.scaled <- scale(all.env$water)
+elev.scaled <- scale(all.env$elev)
+
+# create scaled dataframe
+all.env.scaled <- data.frame(all.env)
+
+# replace variables with scaled ones
+all.env.scaled$julian <- jul.scaled
+all.env.scaled$min_after_sun <- min.scaled
+all.env.scaled$tempf <- temp.scaled
+all.env.scaled$wind <- wind.scaled
+all.env.scaled$tundra <- t.scaled
+all.env.scaled$tussock <- tuss.scaled
+all.env.scaled$lowshrub <- ls.scaled
+all.env.scaled$tallshrub <- ts.scaled
+all.env.scaled$openshrub <- os.scaled
+all.env.scaled$bare <- b.scaled
+all.env.scaled$forest <- f.scaled
+all.env.scaled$wetland <- wl.scaled
+all.env.scaled$water <- wat.scaled
+all.env.scaled$elev <- elev.scaled
+
+str(all.env.scaled)
+
+write.csv(all.env.scaled, here("data/all_env_scaled_df.csv"))
+```
+
+## TIME-REMOVAL MODEL
+
+```{r trmodel}
+
+# check structures and join data frames
+colnames(all.env.scaled)
+str(all.env.scaled)
+str(wipt.wide)
+
+wipt.env.join <- left_join(wipt.wide, all.env.scaled)
+head(wipt.env.join); dim(wipt.env.join)
+str(wipt.env.join)
+
+# create observation and site covariate data frames
+colnames(wipt.env.join)
+
+timeints <- wipt.env.join[,c(2:6)]
+siCovs <- wipt.env.join[,c(7, 9:24)]
+
+
+wiptFrame2 <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = timeints, 
+  siteCovs = siCovs, 
+  # define pifun type: 
+  type = "removal" )
+
+# fit models: multinomPois order of formulas: detection, abundance
+# I will only be running a null model and a full model. Not gonna mess around with that multiple model bullshit
+# can't use all land cover variables because htey add up to 1 within each site
+
+fm0 <- multinomPois(~ 1 ~ 1, data = wiptFrame2) #null model
+fm.full <- multinomPois( ~ -1 + julian + min_after_sun + observer + sky + wind + hear ~ -1 + tundra + tussock + lowshrub + tallshrub + openshrub + bare + wetland + elev, data = wiptFrame2)
+# LOOK UP WARNING MESSAGE
+
+ms2 <- fitList(
+  "lam(.)p(.)" = fm0,
+  "lam(tundra + tussock + lowshrub + tallshrub + openshrub + bare + wetland + elev)p(julian + min_after_sun + observer + sky + wind + hear)" = fm.full)
+
+(ms2sel <- modSel(ms2))
+
+summary(fm.full)
+
+```
+
+## CHECK MODEL FIT
+Will be looking at c-hat for overdispersion, as well as chisq value and its p-value
+```{r gfone, eval=FALSE}
+# Goodness of fit: C-hat result 1.1
+
+chat <- Nmix.gof.test(fm.full, nsim = 1000, plot.hist = TRUE, parallel = TRUE, ncores = 7)
+chat # 1.44
+
+```
