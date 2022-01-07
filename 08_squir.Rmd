@@ -23,6 +23,7 @@ library(dplyr)
 library(tidyverse)
 library(ggplot2)
 library(unmarked)
+library(AICcmodavg)
 ```
 
 
@@ -30,7 +31,7 @@ library(unmarked)
 
 ```{r loaddata}
 all.obs <- read.csv(here("data/all_obs.csv"))
-all.env <- read.csv(here("data/all.env.FINAL.csv"))
+all.env <- read.csv(here("data/all_env_FINAL.csv"))
 
 # inspect
 
@@ -138,13 +139,6 @@ all.env$year <- as.factor(all.env$year)
 all.env$observer <- as.factor(all.env$observer)
 all.env$hear <- as.factor(all.env$hear)
 
-
-# final check for NAs/missing values where there shouldn't be
-x <- as.data.frame(is.na(all.env))
-which(x == "TRUE", arr.ind = TRUE)
-# one of my temps is NA
-# looked at temps of surveys before (40) and after (44) and can enter a temp
-all.env[552,6] <- "42"
 ```
 
 ## CHECK DATA FOR CORRELATIONS
@@ -191,14 +185,109 @@ all.env.scaled$elev <- elev.scaled
 
 str(all.env.scaled)
 # correlation matrix
-cor.mat <- cor(all.env.scaled)
-cor.mat <- cor(all.env.scaled[sapply(all.env.scaled,is.numeric)])
+cor.matrix <- as.matrix(all.env.scaled[,c(2, 4, 6, 8, 10:19)])
+cor.mat <- cor(cor.matrix) 
 cor.mat
 ```
 
+## TIME-REMOVAL MODEL
+
+```{r trmodel}
+
+# check structures and join data frames
+colnames(all.env.scaled)
+str(all.env.scaled)
+str(squir.wide)
+
+squir.env.join <- left_join(squir.wide, all.env.scaled)
+head(squir.env.join); dim(squir.env.join)
+str(squir.env.join)
+
+# create observation and site covariate data frames
+colnames(squir.env.join)
+
+timeints <- squir.env.join[,c(2:6)]
+siCovs <- squir.env.join[,c(7, 9:24)]
 
 
+squirFrame2 <- unmarkedFrameMPois(
+  # import time removal columns(counts):
+  y = timeints, 
+  siteCovs = siCovs, 
+  # define pifun type: 
+  type = "removal" )
 
+# fit models: multinomPois order of formulas: detection, abundance
+# I will only be running a null model and a full model. Not gonna mess around with that multiple model bullshit
+# can't use all land cover variables because htey add up to 1 within each site
+
+fm0 <- multinomPois(~ 1 ~ 1, data = squirFrame2) #null model
+fm.full <- multinomPois( ~ -1 + julian + min_after_sun + observer + sky + wind + hear ~ -1 + tundra + tussock + lowshrub + tallshrub + openshrub + bare + wetland + elev, data = squirFrame2)
+# LOOK UP WARNING MESSAGE
+
+ms2 <- fitList(
+  "lam(.)p(.)" = fm0,
+  "lam(tundra + tussock + lowshrub + tallshrub + openshrub + bare + wetland + elev)p(julian + min_after_sun + observer + sky + wind + hear)" = fm.full)
+
+(ms2sel <- modSel(ms2))
+
+summary(fm.full)
+plot(fm.full)
+```
+
+## CHECK MODEL FIT
+Will be looking at c-hat for overdispersion
+```{r gfone, eval=FALSE}
+# Goodness of fit: C-hat result 1.1
+
+chat <- Nmix.gof.test(fm.full, nsim = 1000, plot.hist = TRUE, parallel = TRUE, ncores = 5)
+chat # 2.2
+
+```
+
+## NEGATIVE BINOMIAL MODEL
+
+Running a negative binomial model through the 'gmultimix' function. 
+
+First, must set up a GMM dataframe
+
+```{r negbinom, eval=FALSE}
+# set up dataframe
+
+NBsquirFrame <- unmarkedFrameGMM(
+  y = timeints, 
+  siteCovs = siCovs, 
+  # now have this number of primary sampling periods argument we must fill:
+  numPrimary=1,
+  # define pifun type: 
+  type = "removal" )
+
+# now fit negative binomial models:
+fm0nb <- gmultmix(~1, ~1, ~1, mixture = "NB", data = NBsquirFrame)
+fm.full.nb <- gmultmix( ~ -1 + tundra + tussock + lowshrub + tallshrub + openshrub + bare + wetland + elev, ~ 1, ~ -1 + julian + min_after_sun + observer + sky + wind + hear,mixture = "NB",data = NBsquirFrame)
+
+
+# rank by AIC
+gms <- fitList(
+  "NB,lam(.)p(.)" = fm0nb,
+  "NB,lam(tundra + tussock + lowshrub + tallshrub + openshrub + bare + wetland + elev)p(julian + min_after_sun + observer + sky + wind + hear)" = fm.full.nb
+)
+
+gms1 <- modSel(gms)
+output.nb <- as(gms1, "data.frame")
+
+output.nb
+
+
+summary(fm.full.nb)
+fm.full.nb
+
+# check c-hat for overdispersion?
+
+chat.nb <- Nmix.gof.test(fm.full.nb, nsim = 1000, plot.hist = TRUE, parallel = TRUE, ncores = 5)
+chat.nb #0.85
+```
+ 
 
 
 
