@@ -288,6 +288,25 @@ chat.nb <- Nmix.gof.test(fm.full.nb, nsim = 1000, plot.hist = TRUE, parallel = T
 chat.nb #0.85
 ```
  
+### ZERO INFLATED POISSON
+For this I will need to fit the data into a different unmarked Frame
+
+```{r zipframe}
+
+squirFrameZIP <- unmarkedFramePCount(
+  y = timeints,
+  siteCovs = siCovs
+)
+squirFrameZIP
+summary(squirFrameZIP)
+
+```
+
+Now fit the model using pcount()
+```{r zipmodel}
+fm0ZIP <- pcount(~1~1, squirFrameZIP, mixture = "ZIP")
+fmZIP <- pcount(~ -1 + julian + min_after_sun + observer + sky + wind + hear, ~ -1 + tundra + tussock + lowshrub + tallshrub + openshrub + bare + wetland + elev, squirFrameZIP)
+```
 
 
 
