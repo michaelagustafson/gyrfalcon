@@ -65,6 +65,8 @@ wipt$count[wipt$species == 0] <- 0
 head(wipt)
 # now 'wipt' df represents counts for Willow Ptarmigan
 
+sum(wipt$count) # sample size 516
+
 # check for na values
 sum(is.na(wipt$time_int))
 
@@ -193,7 +195,7 @@ write.csv(all.env.scaled, here("data/all_env_scaled_df.csv"))
 ```
 
 ## TIME-REMOVAL MODEL
-
+WIPT sample size: 516 individuals counted
 ```{r trmodel}
 
 # check structures and join data frames
@@ -240,9 +242,26 @@ summary(fm.full)
 ## CHECK MODEL FIT
 Will be looking at c-hat for overdispersion, as well as chisq value and its p-value
 ```{r gfone, eval=FALSE}
-# Goodness of fit: C-hat result 1.1
+# Goodness of fit
 
 chat <- Nmix.gof.test(fm.full, nsim = 1000, plot.hist = TRUE, parallel = TRUE, ncores = 7)
 chat # 1.44
 
 ```
+
+### I'm pretty confident in this model. Might try running a prediction:
+
+I am following the example code from the Heirarchical Modeling book
+
+1. Import land cover raster stack and elevation 
+
+
+2. Standardize values using the mean values at sample plots (the same values used to standardize the data actually used in the model)
+
+
+3. Form predictions
+
+
+4. Create rasters
+
+
