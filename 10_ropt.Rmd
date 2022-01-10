@@ -63,6 +63,9 @@ ropt$species[ropt$species != "1"] <- 0
 # change count to 0 for non WIPT
 ropt$count[ropt$species == 0] <- 0
 head(ropt)
+
+sum(ropt$count)
+# sample size of 62
 # now 'ropt' df represents counts for Rock Ptarmigan
 
 # check for na values
@@ -156,6 +159,8 @@ all.env.scaled <- read.csv(here("data/all_env_scaled_df.csv"))
 
 ## TIME-REMOVAL MODEL
 
+ROPT sample size: 62
+Might need to run a zero inflated poisson on this model as well.
 ```{r trmodel}
 
 # check structures and join data frames
@@ -180,6 +185,9 @@ roptFrame2 <- unmarkedFrameMPois(
   siteCovs = siCovs, 
   # define pifun type: 
   type = "removal" )
+
+summary(roptFrame2)
+# sample size: 62
 
 # fit models: multinomPois order of formulas: detection, abundance
 # I will only be running a null model and a full model. Not gonna mess around with that multiple model bullshit
