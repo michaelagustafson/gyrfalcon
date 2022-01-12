@@ -116,6 +116,8 @@ plot(ak.dem.focal)
 
 # create raster of focalized dem
 
+writeRaster(ak.dem.focal, filename=file.path(here(), "ak_dem_focal.tif"), overwrite = TRUE)
+
 ```
 ## EXTRACT ELEVATION AT EACH POINT
 Now we will extract the elevation at each survey point to get the mean elevation within a 390m buffer (this comes from extracting from the focal raster)
