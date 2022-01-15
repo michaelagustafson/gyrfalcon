@@ -75,6 +75,8 @@ r <- raster::merge(test.tif.14, test.tif2.14, test.tif3.14, test.tif4.14)
 plot(r)
 crs(r)
 
+
+
 ```
 
 ## Create separate raster layers for each habitat type
@@ -173,8 +175,6 @@ writeRaster(ak.dem.focal, filename=file.path(here(), "ak_dem_focal.tif"), overwr
 ### Read in focalized rasters (so I don't have to rerun this code)
 
 ```{r focalreadin}
-gc()
-
 lc.list <- list.files(here(), pattern = ".tif")
 # create a raster stack from the rasters in the list
 lc.stack4 <- raster::stack(lc.list[2:16])
@@ -191,10 +191,12 @@ plot(e.focal)
 
 ```{r reproject}
 # reproject land cover crs to elevation crs
-lc.stack5 <- projectRaster(lc.stack4, crs = crs(e.focal))
+crs(lc.stack4[[2]])
+lc.stack5 <- projectRaster(e.focal, crs = crs(lc.stack))
 
+lc.stackcrop <- raster::crop(lc.stack)
 # crop so extents really are the same (ran into some issues later on when trying to stack)
-r.reproj <- raster::crop(r.reproj, ak_dem)
+r.reproj <- raster::crop(e.focal, r.reproj)
 # check to make sure stats are the same
 extent(ak_dem) == extent(r.reproj)
 crs(r.reproj)
