@@ -31,7 +31,6 @@ library(rgdal)
 library(ggplot2)
 library(tidyverse)
 library(raster)
-library(taRifx)
 library(tidyr)
 library(dplyr)
 library(stringr)
@@ -40,7 +39,9 @@ library(stringr)
 ## IMPORT DEM
 Import elevation raster and get land cover and elevation to have same origin, CRS, and extent
 ```{r dem}
-ak_dem <- raster(here("data/DEM_Michaela/DEM_Michaela/dsm_mosaic_AK.tif"))
+getwd()
+here()
+ak_dem <- raster::raster(here("data/DEM_Michaela/dsm_mosaic_AK.tif"))
 plot(ak_dem)
 
 crs(ak_dem)
@@ -77,6 +78,22 @@ crs(r)
 
 
 
+```
+
+```{r reproject}
+# reproject land cover crs to elevation crs
+
+r.reproject <- projectRaster(r, crs = crs(ak_dem))
+
+
+lc.crop <- raster::crop(r.rp, ak_dem)
+# crop so extents really are the same (ran into some issues later on when trying to stack)
+r.reproj <- raster::crop(e.focal, r.reproj)
+# check to make sure stats are the same
+extent(ak_dem) == extent(r.reproj)
+crs(r.reproj)
+crs(ak_dem)
+origin(ak_dem) == origin(r.reproj)
 ```
 
 ## Create separate raster layers for each habitat type
@@ -189,20 +206,7 @@ plot(e.focal)
 
 1. Reproject land cover raster to be same CRS, origin, extent as elevation 
 
-```{r reproject}
-# reproject land cover crs to elevation crs
-crs(lc.stack4[[2]])
-lc.stack5 <- projectRaster(e.focal, crs = crs(lc.stack))
 
-lc.stackcrop <- raster::crop(lc.stack)
-# crop so extents really are the same (ran into some issues later on when trying to stack)
-r.reproj <- raster::crop(e.focal, r.reproj)
-# check to make sure stats are the same
-extent(ak_dem) == extent(r.reproj)
-crs(r.reproj)
-crs(ak_dem)
-origin(ak_dem) == origin(r.reproj)
-```
 ## IMPORT SURVEY LOCATIONS
 
 2019 survey locations are in lat/lon. 2021 survey locations are in UTMs.
