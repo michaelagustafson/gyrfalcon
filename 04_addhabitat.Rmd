@@ -41,7 +41,7 @@ Import elevation raster and get land cover and elevation to have same origin, CR
 ```{r dem}
 getwd()
 here()
-ak_dem <- raster::raster(here("data/DEM_Michaela/dsm_mosaic_AK.tif"))
+ak_dem <- raster::raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/DEM_Michaela/DEM_Michaela/dsm_mosaic_AK.tif")
 plot(ak_dem)
 
 crs(ak_dem)
@@ -57,16 +57,16 @@ I will be selecting out the files that have the land cover for 2014. The four ti
 
 ```{r landcover}
 
-test.tif.14 <- raster::raster(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh04v01_2014.tif"))
+test.tif.14 <- raster::raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_2014lyrs/ABoVE_LandCover_Bh04v01_2014.tif")
 plot(test.tif.14)
 
-test.tif2.14 <- raster::raster(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh04v02_2014.tif"))
+test.tif2.14 <- raster::raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_2014lyrs/ABoVE_LandCover_Bh04v02_2014.tif")
 plot(test.tif2.14)
 
-test.tif3.14 <- raster::raster(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh03v01_2014.tif"))
+test.tif3.14 <- raster::raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_2014lyrs/ABoVE_LandCover_Bh03v01_2014.tif")
 plot(test.tif3.14)
 
-test.tif4.14 <- raster::raster(here("data/ABoVE_2014lyrs/ABoVE_LandCover_Bh03v02_2014.tif"))
+test.tif4.14 <- raster::raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_2014lyrs/ABoVE_LandCover_Bh03v02_2014.tif")
 plot(test.tif4.14)
 
 
