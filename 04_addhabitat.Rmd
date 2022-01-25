@@ -83,17 +83,17 @@ crs(r)
 ```{r reproject}
 # reproject land cover crs to elevation crs
 
-r.reproject <- projectRaster(r, crs = crs(ak_dem))
+r.reproject <- projectRaster(r, ak_dem)
 
 
-lc.crop <- raster::crop(r.rp, ak_dem)
+lc.crop <- raster::crop(r.reproject, ak_dem)
 # crop so extents really are the same (ran into some issues later on when trying to stack)
-r.reproj <- raster::crop(e.focal, r.reproj)
+
 # check to make sure stats are the same
-extent(ak_dem) == extent(r.reproj)
-crs(r.reproj)
+extent(ak_dem) == extent(lc.crop)
+crs(lc.crop)
 crs(ak_dem)
-origin(ak_dem) == origin(r.reproj)
+origin(ak_dem) == origin(lc.crop)
 ```
 
 ## Create separate raster layers for each habitat type
@@ -101,7 +101,7 @@ origin(ak_dem) == origin(r.reproj)
 2. Add legend to raster data so we know what number corresponds to what habitat type
 
 ```{r lclegend}
-aboveLC <- read.csv(here("data/ABoVE_LandClass_Labels.csv"))
+aboveLC <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_LandClass_Labels.csv")
 str(aboveLC)
 aboveLC$Code <- as.factor(aboveLC$Code)
 print(aboveLC)
@@ -121,21 +121,21 @@ Wetland = `Fen` + `Shallows/littoral`
 
 ```{r separatelayers}
 
-egforest <- (r == 1)
-decforest <- (r == 2)
-mixforest <- (r == 3)
-woodland <- (r == 4)
-lowshrub <- (r == 5)
-tallshrub <- (r == 6)
-openshrub <- (r == 7)
-tundra <- (r == 8)
-tussock <- (r == 9)
-sparseveg <- (r == 10)
-fen <- (r == 11)
-bog <- (r == 12)
-littoral <- (r == 13)
-barren <- (r == 14)
-water <- (r == 15)
+egforest <- (lc.crop == 1)
+decforest <- (lc.crop == 2)
+mixforest <- (lc.crop == 3)
+woodland <- (lc.crop == 4)
+lowshrub <- (lc.crop == 5)
+tallshrub <- (lc.crop == 6)
+openshrub <- (lc.crop == 7)
+tundra <- (lc.crop == 8)
+tussock <- (lc.crop == 9)
+sparseveg <- (lc.crop == 10)
+fen <- (lc.crop == 11)
+bog <- (lc.crop == 12)
+littoral <- (lc.crop == 13)
+barren <- (lc.crop == 14)
+water <- (lc.crop == 15)
 
 
 ```
@@ -172,7 +172,7 @@ plot(lc_stack3[[3]])
 
 
 # save each layer as it own tif
-setwd(here())
+getwd()
 writeRaster(lc_stack3, filename=names(lc_stack3), bylayer=TRUE, format="GTiff", overwrite = TRUE)
 
 
