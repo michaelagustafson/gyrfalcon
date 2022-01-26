@@ -169,7 +169,7 @@ names(lc_stack3) <- c("egforest", "decforest", "mixforest", "woodland", "lowshru
 
 # test plot
 plot(lc_stack3[[3]])
-
+plot(lc_stack3[[6]])
 
 # save each layer as it own tif
 getwd()
@@ -180,10 +180,13 @@ writeRaster(lc_stack3, filename=names(lc_stack3), bylayer=TRUE, format="GTiff", 
 ## FOCAL FOR MEAN ELEVATION
 ```{r focal}
 ?terra::focal
-ak.dem.focal <- terra::focal(ak_dem, w = matrix(1, nc=13, nr=13), fun = mean, na.rm = TRUE)
+ak.dem.focal <- raster::focal(ak_dem, w = matrix(1, nc=13, nr=13), fun = mean, na.rm = TRUE)
+
+
 plot(ak_dem)
 plot(ak.dem.focal)
 
+plot(ak.dem.focal.original)
 # create raster of focalized dem
 
 writeRaster(ak.dem.focal, filename=file.path(here(), "ak_dem_focal.tif"), overwrite = TRUE)
@@ -204,8 +207,6 @@ plot(e.focal)
 ```
 
 
-1. Reproject land cover raster to be same CRS, origin, extent as elevation 
-
 
 ## IMPORT SURVEY LOCATIONS
 
@@ -223,10 +224,10 @@ At the moment, not sure what I used the backup points for...
 
 ```{r pointimport}
 
-points.19 <- read.csv(here("data/Point_Count_Env_2019_MG_cleaned.csv"))
-gpx.19 <- read.csv(here("data/finalwp_2019.csv"))
-ogpoints.19 <- read.csv("C:/Gyrfalcon/gyrfalcon/data/originalpoints_2019.csv", skip = 22)
-backup.19 <- read.csv("C:/Gyrfalcon/gyrfalcon/data/GPS002_2019backup.csv", skip = 22)
+points.19 <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/Point_Count_Env_2019_MG_cleaned.csv")
+gpx.19 <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/finalwp_2019.csv")
+ogpoints.19 <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/originalpoints_2019.csv", skip = 22)
+backup.19 <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/GPS002_2019backup.csv", skip = 22)
 
 # There are extra '1' at the end of the waypoint number names, need to remove them so the key id will match when merging dataframes
 backup.19$name = str_remove(backup.19$name, "^0")
@@ -307,7 +308,7 @@ points.2019 <- points.2019[complete.cases(points.2019),]
 points.2019.all <- rbind(miss.og.points, points.2019)
 
 # save CSV of these fixed points and full df for safe keeping
-write.csv(points.2019.all, here("data/points_2019_all_FINAL.csv"))
+write.csv(points.2019.all, ("D:/GYRF/Gyrfalcon/gyrfalcon/output/points_2019_all_FINAL.csv"))
 
 ## assign crs
 points19.sf <- st_as_sf(points.2019.all, 
@@ -326,7 +327,7 @@ st_is_valid(points19.sf)
 #st_transform
 
 # 2019 points
-points19.proj <- st_transform(points19.sf, crs(lc.stack3))
+points19.proj <- st_transform(points19.sf, crs(lc_stack3))
 st_crs(points19.proj)
 plot(points19.proj)
 
@@ -337,7 +338,7 @@ plot(points19.proj)
 
 ```{r 21points}
 
-points.21 <- read.csv(here("data/Point_Count_Env_2021_MG.csv"))
+points.21 <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/Point_Count_Env_2021_MG.csv")
 head(points.21); dim(points.21)
 
 # subset id and utms
@@ -350,7 +351,7 @@ head(points.21)
 points.21 <- points.21[,c(7, 5:6)]
 head(points.21); dim(points.21)
 # export for safe keeping
-write.csv(points.21, here("data/utms_21_final.csv"))
+write.csv(points.21, ("D:/GYRF/Gyrfalcon/gyrfalcon/output/utms_21_FINAL.csv"))
 
 st_crs(points.21)
 # need to assign crs
@@ -369,7 +370,7 @@ st_is_valid(points.21.sf)
 
 
 # reproject 2021 points to match hab raster crs
-points21.proj <- st_transform(points.21.sf, crs(lc.stack3))
+points21.proj <- st_transform(points.21.sf, crs(lc_stack3))
 st_crs(points21.proj)
 
 
@@ -377,8 +378,18 @@ plot(points21.proj)
 
 
 # CHECK THAT ALL POINTS LOOK OKAY
-plot(lc.stack3[[1]])
+plot(lc_stack3[[6]])
 plot(points19.proj, add = TRUE)
 plot(points21.proj[1], add = TRUE)
 
 ```
+
+
+
+
+
+
+
+
+
+
