@@ -385,9 +385,53 @@ plot(points21.proj[1], add = TRUE)
 ```
 
 
+### EXTRACT HABITAT FROM FOCALIZED RAsTERS
+
+## EXTRACT VALUES AT EACH SURVEY POINT
+Since we have already calculated the percentage of land cover within a 390m buffer using the focal function, we can now just extract the values at each point without having to do another buffer/function.
+
+1. Extract raster values at each point location
+```{r extract}
+
+lc.19 <- raster::extract(lc_stack3, points19.proj)
+lc.21 <- raster::extract(lc_stack3, points21.proj)
+```
 
 
+2. Turn matrices into tables/dataframes and join with original point ids
 
+```{r}
+lc19.join <- as.data.frame(cbind(points19.proj, lc.19))
+lc21.join <- as.data.frame(cbind(points21.proj, lc.21))
+
+```
+
+3. Merge (add) land cover types into specified groups
+```{r}
+# 2019
+colnames(lc19.join)
+
+lc19.join2 <- lc19.join %>%
+  mutate(forest = egforest + decforest + mixforest + woodland,
+         bare = barren + sparseveg,
+         wetland = bog + fen + littoral)
+
+# take out extra columns (ones that were added together) and reorder
+colnames(lc19.join2)
+lc19.join3 <- lc19.join2[,c(1, 6:10, 16, 18:20)]
+
+
+# 2021
+colnames(lc21.join)
+
+lc21.join2 <- lc21.join %>%
+  mutate(forest = egforest + decforest + mixforest + woodland,
+         bare = barren + sparseveg,
+         wetland = bog + fen + littoral)
+
+colnames(lc21.join2)
+lc21.join3 <- lc21.join2[,c(1, 6:10, 16, 18:20)]
+```
 
 
 
