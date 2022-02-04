@@ -26,7 +26,6 @@ These are the packages used in this code:
 library(terra)
 library(sf)
 library(sp)
-library(here)
 library(rgdal)
 library(ggplot2)
 library(tidyverse)
@@ -259,6 +258,7 @@ dem.clip <- crop(ak_dem, e2)
 dem.clip <- mask(dem.clip, e2)
 writeRaster(dem.clip, "D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.tif", overwrite = TRUE)
 #projecting raster to land cover CRS
+dem.clip <- raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.tif")
 dem.clip.lc <- projectRaster(dem.clip, crs = "+proj=aea +lat_0=40 +lon_0=-96 +lat_1=50 +lat_2=70 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs" )
 writeRaster(dem.clip.lc, "D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.lc.tif", overwrite = TRUE)
 
@@ -268,6 +268,27 @@ all.mos.clip <- mask(all.mos.clip, e2.lc)
 writeRaster(all.mos.clip, "D:/GYRF/Gyrfalcon/gyrfalcon/data/all.mos.clip.tif", overwrite = TRUE)
 
 ```
+
+
+### Resample DEM from 5x5 to 30x30 to match land cover resolution
+```{r}
+#### resample dem to 30 x 30 to match land cover #######
+all.mos.clip <- raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/all.mos.clip.tif")
+df <- as.data.frame(all.mos.clip, xy = TRUE)
+res(all.mos.clip) <- 30
+all.mos.clip.30 <- all.mos.clip
+
+dem.clip.lc <- raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.lc.tif")
+dem.clip.lc.30 <- resample(dem.clip.lc, all.mos.clip.30, method = "bilinear")
+writeRaster(dem.clip.lc.30, "D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.lc.30.tif", overwrite = TRUE)
+
+```
+
+
+
+
+
+
 
 
 
