@@ -18,7 +18,6 @@ In this code I will be running my time-removal abundance model for Arctic Ground
 ## LIBRARY
 These are the packages used in the following code:
 ```{r library}
-library(here) # for locating filepath
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
@@ -30,20 +29,13 @@ library(AICcmodavg)
 ## LOAD OBSERVATION and ENVIRONMENTAL DATA
 
 ```{r loaddata}
-all.obs <- read.csv(here("data/all_obs.csv"))
-all.env <- read.csv(here("data/all_env_FINAL.csv"))
-
+all.obs <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/all_obs.csv")
+all.env <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/output/all.covs.FINAL.csv")
+# remove extra 'X' column from import
+all.obs <- all.obs[,-c(1)]
+all.env <- all.env[,-c(1)]
 # inspect
 
-head(all.obs)
-head(all.env)
-
-# get rid of extra 'X' column added from import
-
-all.obs <- all.obs[,c(2:10)]
-all.env <- all.env[,c(2:20)]
-
-# check
 head(all.obs)
 head(all.env)
 
@@ -114,6 +106,7 @@ all.env$id <- as.factor(all.env$id)
 miss1 <- anti_join(all.env, squir.agg) # clear
 miss2 <- anti_join(squir.agg, all.env) # clear
 
+# nothing missing! 
 
 
 # spread dataframes:
@@ -135,13 +128,14 @@ squir.wide <- squir.agg %>%
 
 str(all.env) 
 all.env$sky <- as.factor(all.env$sky)
-all.env$year <- as.factor(all.env$year)
 all.env$observer <- as.factor(all.env$observer)
 all.env$hear <- as.factor(all.env$hear)
 
 ```
 
-## CHECK DATA FOR CORRELATIONS
+## CHECK DATA FOR CORRELATIONS, ETC.
+
+### Look at land cover types
 
 ```{r corrtest}
 
