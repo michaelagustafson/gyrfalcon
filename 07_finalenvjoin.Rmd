@@ -15,15 +15,14 @@ In this code I will be joining my extracted land cover and elevation values to m
 
 
 1. Import full environmental dataframe
-2. Import 2019&2021 land cover data
-3. Import 2019&2021 mean elevation data
+2. Import 2019&2021 land cover and elevation covariates
 4. Merge and export dataframe
 
 
 ## LIBRARY
 These are the following packages used in this code:
 ```{r library}
-library(here) # the here function automatically sets your current project as your working directory
+
 library(dplyr) # for manipulating data
 ```
 
@@ -31,7 +30,7 @@ library(dplyr) # for manipulating data
 ## 1. Import environmental dataframe
 Importing from previous cleaning code "data/all_env.csv"
 ```{r envimport}
-all.env <- read.csv(here("data/all_env.csv"))
+all.env <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/all_env.csv")
 # take out added 'X' column
 colnames(all.env)
 all.env <- all.env[,c(2:10)]
@@ -66,41 +65,17 @@ all.env$sky <- as.factor(all.env$sky)
 ### 2. Import land cover
 
 ```{r lc}
-lc19 <- read.csv(here("data/landcover_19.csv"))
-lc21 <- read.csv(here("data/landcover_21.csv"))
-
-# Bind years together
-
-all.lc <- rbind(lc19, lc21)
+pt.covs <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/output/pts.covs.csv")
 
 # get rid of extra 'X' column from import
-colnames(all.lc)
-all.lc <- all.lc[,c(2:11)]
+colnames(pt.covs)
+pt.covs <- pt.covs[,c(2:21)]
 
 # check
-head(all.lc); dim(all.lc)
+head(pt.covs); dim(pt.covs)
 
 # I know there is a spelling error for COUN_3_12_4 row 38, col 1 in all.lc dataframe
-all.lc[38,1] <- "COUN_3_12_4"
-
-```
-
-
-### 3. Import mean elevation
-```{r elev}
-elev19 <- read.csv(here("data/mean_elev_19.csv"))
-elev21 <- read.csv(here("data/mean_elev_21.csv"))
-
-# bind years together
-all.elev <- rbind(elev19, elev21)
-
-# get rid of unecessary 'X' column
-colnames(all.elev)
-
-all.elev <- all.elev[,c(2:3)]
-
-# check
-head(all.elev); dim(all.elev)
+pt.covs[38,1] <- "COUN_3_12_4"
 
 ```
 
@@ -108,12 +83,21 @@ head(all.elev); dim(all.elev)
 ### 4. Merge land cover and elevation to all environmental
 
 ```{r allmerge}
-all.env2 <- left_join(all.env, all.lc, by = 'id')
-all.env3 <- left_join(all.env2, all.elev, by = 'id')
+all.covs <- left_join(all.env, pt.covs, by = 'id')
+
+# and from future  coding I know there is a missing temperature
+# double check that its in the same location and input the correct 
+# value from the hard copy datasheets
+x <- as.data.frame(is.na(all.covs))
+which(x == "TRUE", arr.ind = TRUE)
+# one of my temps is NA
+# looked at temps of surveys before (40) and after (44) and can enter a temp
+all.covs[552,6] <- "42"
+
 
 ### export final dataframe:
 
-write.csv(all.env3, here("data/all_env_FINAL.csv"))
+write.csv(all.covs, "D:/GYRF/Gyrfalcon/gyrfalcon/output/all.covs.FINAL.csv")
 ```
 
 
