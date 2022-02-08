@@ -57,7 +57,7 @@ test.tif4.14 <- raster::raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_2014lyrs/
 r <- raster::merge(test.tif.14, test.tif2.14, test.tif3.14, test.tif4.14)
 r[r <= 0 ] <- NA
 
-plot(r)
+#plot(r)
 
 writeRaster(r, "D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_2014lyrs/all.mos.tif", overwrite = TRUE)
 
@@ -240,226 +240,75 @@ writeOGR(new, dsn="D:/GYRF/Gyrfalcon/gyrfalcon/data", layer="pts19&21.proj.lc" ,
 
 ```
 
-
-#### MAKE EXTENT FROM POINTS
-```{r makee}
-#### make study extent polygon + some extra ######
+### Transform CRS of points to match DEM
+```{r pointstodem}
+# transform crs to match dem
 pts.all <- readOGR("D:/GYRF/Gyrfalcon/gyrfalcon/data", "pts19&21.proj.lc")
-
-#### make study extent polygon + some extra buffer for focal function
-e <- extent(points19.proj) 
-p <- as(e, 'SpatialPolygons') 
-proj4string(p) <- "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs "
-e2 <- rgeos::gBuffer(p, width = 5000) # 5km buffer
-
-
-#### clip dem and land cover by new extent ####
-dem.clip <- crop(ak_dem, e2)
-dem.clip <- mask(dem.clip, e2)
-writeRaster(dem.clip, "D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.tif", overwrite = TRUE)
-#projecting raster to land cover CRS
-dem.clip <- raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.tif")
-dem.clip.lc <- projectRaster(dem.clip, crs = "+proj=aea +lat_0=40 +lon_0=-96 +lat_1=50 +lat_2=70 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs" )
-writeRaster(dem.clip.lc, "D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.lc.tif", overwrite = TRUE)
-
-e2.lc <- spTransform(e2, CRS("+proj=aea +lat_0=40 +lon_0=-96 +lat_1=50 +lat_2=70 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs" ))
-all.mos.clip <- crop(r, e2.lc)
-all.mos.clip <- mask(all.mos.clip, e2.lc)
-writeRaster(all.mos.clip, "D:/GYRF/Gyrfalcon/gyrfalcon/data/all.mos.clip.tif", overwrite = TRUE)
+pts.all2 <- spTransform(pts.all, CRS("+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs"))
+writeOGR(pts.all2, dsn="D:/GYRF/Gyrfalcon/gyrfalcon/data", layer="pts19&21" , driver="ESRI Shapefile")
 
 ```
 
+### Aggregate to 400m resolution for DEM and land cover rasters
 
-### Resample DEM from 5x5 to 30x30 to match land cover resolution
-```{r}
-#### resample dem to 30 x 30 to match land cover #######
-all.mos.clip <- raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/all.mos.clip.tif")
-df <- as.data.frame(all.mos.clip, xy = TRUE)
-res(all.mos.clip) <- 30
-all.mos.clip.30 <- all.mos.clip
+```{r resample400}
+####### resample/aggregate dem to 400 m resolution using mean value ########
+r <- raster(extent(ak_dem), res = 400, crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs ")
 
-dem.clip.lc <- raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.lc.tif")
-dem.clip.lc.30 <- resample(dem.clip.lc, all.mos.clip.30, method = "bilinear")
-writeRaster(dem.clip.lc.30, "D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.clip.lc.30.tif", overwrite = TRUE)
+dem.400 <- aggregate(ak_dem, fact = 80, fun = mean)
 
-```
+writeRaster(dem.400, "D:/GYRF/Gyrfalcon/gyrfalcon/data/dem.400.tif", overwrite = TRUE)
 
+############### create land cover percent layers 400 meter resolution ########
+all.mos <- raster("D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_2014lyrs/all.mos.tif")
 
+cov_pct <- lapply(unique(all.mos), function(land_class) {
+  aggregate(all.mos, fact=13, fun=function(values, na.rm) {
+    sum(values==land_class, na.rm=na.rm)/length(values)
+  })
+})
 
-
-
-
-
-
-
-
-
-## Create separate raster layers for each habitat type
-
-2. Add legend to raster data so we know what number corresponds to what habitat type
-
-```{r lclegend}
-aboveLC <- read.csv("D:/GYRF/Gyrfalcon/gyrfalcon/data/ABoVE_LandClass_Labels.csv")
-str(aboveLC)
-aboveLC$Code <- as.factor(aboveLC$Code)
-print(aboveLC)
-```
-
-3. Separate out each habitat type
-
-I will group land cover types as so:
-Tundra = `Herbaceous`
-Tussock = `Tussock Tundra`
-Low_Shrub = `Low Shrub`
-Bare_Ground = `Barren` + `Sparsely Vegetated`
-Tall_Shrub = `Tall Shrub`
-Open_Shrub = `Open Shrubs`
-Forest = `Deciduous Forest` + `Evergreen Forest` + `Mixed Forest` + 'Woodland'
-Wetland = `Fen` + `Shallows/littoral`
-
-```{r separatelayers}
-
-egforest <- (lc.crop == 1)
-decforest <- (lc.crop == 2)
-mixforest <- (lc.crop == 3)
-woodland <- (lc.crop == 4)
-lowshrub <- (lc.crop == 5)
-tallshrub <- (lc.crop == 6)
-openshrub <- (lc.crop == 7)
-tundra <- (lc.crop == 8)
-tussock <- (lc.crop == 9)
-sparseveg <- (lc.crop == 10)
-fen <- (lc.crop == 11)
-bog <- (lc.crop == 12)
-littoral <- (lc.crop == 13)
-barren <- (lc.crop == 14)
-water <- (lc.crop == 15)
-
-
-```
-4. Combine SpatRasters into a RasterStack
-```{r restack}
-
-lc_stack <- raster::stack(egforest, decforest, mixforest, woodland, lowshrub, tallshrub, openshrub, tundra, tussock, sparseveg, fen, bog, littoral, barren, water)
-
-```
-
-
-4. Run focal function to get how much area is covered by each land cover type in the buffer size of 390m (13x13 30m cells)
-```{r focal}
-# run a for loop that will use the focal function to calculate the percentage of each habitat type within our 390m square buffer.
-
-# first need to create empty lists that the data from the for loop will be stored in
-lc_stack2 <- list()
-lc_stack3 <- list()
-
-# heres the loop
-for(i in 1:length(lc_stack)){
-  lc_stack2[[i]] <- raster::focal(lc_stack[[i]], w=matrix(1, nrow=13, ncol=13), fun=sum, na.rm=TRUE)
-  lc_stack3[[i]] <- (lc_stack2[[i]]/169)
+cov_pct2 <- list()
+for(i in 1:length(cov_pct)){
+  cov_pct2[[i]] <- projectRaster(cov_pct[[i]], crs = "+proj=aea +lat_0=50 +lon_0=-154 +lat_1=55 +lat_2=65 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs ")
 }
 
-# restack the layers
-lc_stack3 <- raster::stack(lc_stack3)
-# now change the names of the columns to match what habitat type they actually are
-names(lc_stack3) <- c("egforest", "decforest", "mixforest", "woodland", "lowshrub", "tallshrub", "openshrub", "tundra", "tussock", 'sparseveg', 'fen', 'bog', 'littoral', 'barren', 'water')
+lc <- list()
+for(i in 1:length(cov_pct2)){
+  lc[[i]] <- resample(cov_pct2[[i]], r, method = "bilinear")
+}
 
+names(lc) <- c("egforest", "decforest", "mixforest", "woodland", "lowshrub", "tallshrub", "openshrub", "tundra", "tussock", "sparseveg", "fen", "bog", "littoral", "barren", "water")
 
-# test plot
-plot(lc_stack3[[3]])
-plot(lc_stack3[[6]])
+lc <- stack(lc)
+
+### resample so all rasters line up ######
+dem.400.re <- resample(dem.400, lc[[1]], method = "bilinear")
+
+c <- stack(lc, dem.400.re)
 
 # save each layer as it own tif
-getwd()
-writeRaster(lc_stack3, filename=names(lc_stack3), bylayer=TRUE, format="GTiff", overwrite = TRUE)
+writeRaster(c, filename=names(c), bylayer=TRUE, format="GTiff", overwrite = TRUE)
 
-
-```
-## FOCAL FOR MEAN ELEVATION
-```{r focal}
-?terra::focal
-ak.dem.focal <- raster::focal(ak_dem, w = matrix(1, nc=13, nr=13), fun = mean, na.rm = TRUE)
-
-
-plot(ak_dem)
-plot(ak.dem.focal)
-
-plot(ak.dem.focal.original)
-# create raster of focalized dem
-
-writeRaster(ak.dem.focal, filename=file.path(here(), "ak_dem_focal.tif"), overwrite = TRUE)
-
-```
-### Read in focalized rasters (so I don't have to rerun this code)
-
-```{r focalreadin}
-lc.list <- list.files(here(), pattern = ".tif")
-# create a raster stack from the rasters in the list
-lc.stack4 <- raster::stack(lc.list[2:16])
-
-#check
-plot(lc.stack4[[7]])
-
-e.focal <- raster::raster(lc.list[1])
-plot(e.focal)
+# will copy these tifs over to GYRF/Gyrfalcon/gyrfalon folder manually...
 ```
 
-
-
-
-
-
-
-
-### EXTRACT HABITAT FROM FOCALIZED RAsTERS
-
-## EXTRACT VALUES AT EACH SURVEY POINT
-Since we have already calculated the percentage of land cover within a 390m buffer using the focal function, we can now just extract the values at each point without having to do another buffer/function.
-
-1. Extract raster values at each point location
+### Final part - extracting at points
 ```{r extract}
+########### bring in all resampled 400 m rasters to extract to survey points #########
+######### extract by 400 m buffer around all points ######
+rastlist <- list.files(path = "D:/GYRF/Gyrfalcon/gyrfalcon/400m", pattern='.tif$', all.files=TRUE, full.names = TRUE)
+all <- lapply(rastlist, raster)
+a <- stack(all)
 
-lc.19 <- raster::extract(lc_stack3, points19.proj)
-lc.21 <- raster::extract(lc_stack3, points21.proj)
+pts <- readOGR("D:/GYRF/Gyrfalcon/gyrfalcon/data", "pts19&21")
+
+pts.extract <- as.data.frame(raster::extract(a, pts, buffer = 400, fun=mean))
+df <- as.data.frame(pts.all2)
+pts.covs <- cbind(df, pts.extract)
+
+colnames(pts.covs)[8] <- "elev"
+
+write.csv(pts.covs, "D:/GYRF/Gyrfalcon/gyrfalcon/output/pts.covs.csv")
 ```
-
-
-2. Turn matrices into tables/dataframes and join with original point ids
-
-```{r}
-lc19.join <- as.data.frame(cbind(points19.proj, lc.19))
-lc21.join <- as.data.frame(cbind(points21.proj, lc.21))
-
-```
-
-3. Merge (add) land cover types into specified groups
-```{r}
-# 2019
-colnames(lc19.join)
-
-lc19.join2 <- lc19.join %>%
-  mutate(forest = egforest + decforest + mixforest + woodland,
-         bare = barren + sparseveg,
-         wetland = bog + fen + littoral)
-
-# take out extra columns (ones that were added together) and reorder
-colnames(lc19.join2)
-lc19.join3 <- lc19.join2[,c(1, 6:10, 16, 18:20)]
-
-
-# 2021
-colnames(lc21.join)
-
-lc21.join2 <- lc21.join %>%
-  mutate(forest = egforest + decforest + mixforest + woodland,
-         bare = barren + sparseveg,
-         wetland = bog + fen + littoral)
-
-colnames(lc21.join2)
-lc21.join3 <- lc21.join2[,c(1, 6:10, 16, 18:20)]
-```
-
-
-
-
 
