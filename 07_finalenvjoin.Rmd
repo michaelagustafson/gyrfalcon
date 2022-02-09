@@ -99,25 +99,15 @@ all.covs[552,6] <- "42"
 
 3. Merge (add) land cover types into specified groups
 ```{r}
-# 2019
-colnames(lc19.join)
-lc19.join2 <- lc19.join %>%
+
+colnames(all.covs)
+all.covs2 <- all.covs %>%
   mutate(forest = egforest + decforest + mixforest + woodland,
          bare = barren + sparseveg,
          wetland = bog + fen + littoral)
-# take out extra columns (ones that were added toether) and reorder
-colnames(lc19.join2)
-lc19.join3 <- lc19.join2[,c(1, 13, 14, 8, 12, 10, 19, 18, 20, 15)]
-# 2021
-colnames(lc21.join)
-lc21.join2 <- lc21.join %>%
-  mutate(forest = egforest + decforest + mixforest + woodland,
-         bare = barren + sparseveg,
-         wetland = bog + fen + littoral)
-colnames(lc21.join2)
-lc21.join3 <- lc21.join2[,c(1, 13, 14, 8, 12, 10, 19, 18, 20, 15)]
-
-
+# take out extra columns (ones that were added together) and reorder
+colnames(all.covs2)
+all.covs3 <- all.covs2[,c(1:9, 11, 12, 16, 20, 22, 24:27, 29:31)]
 
 
 ### export final dataframe:
