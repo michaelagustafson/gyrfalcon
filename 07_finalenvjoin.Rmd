@@ -99,7 +99,6 @@ all.covs[552,6] <- "42"
 
 3. Merge (add) land cover types into specified groups
 ```{r}
-
 colnames(all.covs)
 all.covs2 <- all.covs %>%
   mutate(forest = egforest + decforest + mixforest + woodland,
@@ -112,7 +111,7 @@ all.covs3 <- all.covs2[,c(1:9, 11, 12, 16, 20, 22, 24:27, 29:31)]
 
 ### export final dataframe:
 
-write.csv(all.covs, "D:/GYRF/Gyrfalcon/gyrfalcon/output/all.covs.FINAL.csv")
+write.csv(all.covs3, "D:/GYRF/Gyrfalcon/gyrfalcon/output/all.covs.FINAL.csv")
 ```
 
 
